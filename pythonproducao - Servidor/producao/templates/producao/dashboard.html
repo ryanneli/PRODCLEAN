@@ -1,0 +1,617 @@
+{% extends "producao/base.html" %}
+{% load static %}
+{% block content %}
+<style>
+.dashboard-wrapper {
+    height: calc(100vh - 120px); 
+    display: flex;
+    margin-top: -10px;
+    flex-direction: column;
+    gap: 8px;
+    overflow: hidden; 
+    box-sizing: border-box;
+}
+
+/* Remove travas de largura e centralização do Bootstrap */
+#fotoModal .modal-dialog {
+    max-width: none !important; 
+    display: flex;
+    justify-content: center; 
+}
+
+/* Garante que o conteúdo possa crescer horizontalmente e verticalmente */
+#fotoModal .modal-content {
+    min-width: 450px;
+    min-height: 300px;
+    width: 1000px; 
+    max-width: 95vw; 
+    max-height: 85vh;
+    position: relative;
+    user-select: none;
+    display: flex;
+    flex-direction: column;
+}
+
+#fotoModal .modal-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.5rem;
+}
+
+/* Alça de redimensionamento no canto inferior direito */
+.modal-resizer {
+    width: 20px;
+    height: 20px;
+    background: transparent;
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    cursor: nwse-resize;
+    z-index: 9999;
+}
+
+#fotoModal .modal-content {
+    position: relative;
+    user-select: none;
+}
+
+/* Alça diagonal no canto inferior direito */
+.resizer-diagonal {
+    width: 20px;
+    height: 20px;
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    cursor: nwse-resize;
+    z-index: 1000;
+}
+
+/* Alça lateral direita */
+.resizer-right {
+    width: 10px;
+    height: 100%;
+    position: absolute;
+    right: 0;
+    top: 0;
+    cursor: e-resize;
+    z-index: 999;
+}
+
+/* Alça inferior */
+.resizer-bottom {
+    width: 100%;
+    height: 10px;
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    cursor: s-resize;
+    z-index: 999;
+}
+
+
+    /* CABEÇALHOS DE FLUXO */
+    .fluxo-section { flex: 1; display: flex; flex-direction: column; }
+    .fluxo-header {
+        font-size: 0.75rem;
+        font-weight: 900;
+        text-align: center;
+        padding: 5px;
+        border-radius: 10px 10px 0 0;
+        text-transform: uppercase;
+        margin-bottom: -1px;
+        color: white;
+        letter-spacing: 1px;
+    }
+    .bg-entrada { background: #f59e0b; border: 1px solid #d97706; } 
+    .bg-producao { background: #10b981; border: 1px solid #059669; } 
+    .bg-expedicao { background: #3b82f6; border: 1px solid #2563eb; } 
+
+    /* CARDS DE STATUS */
+.cards-row { 
+    display: flex; 
+    gap: 8px; 
+    flex: 0 0 250px; 
+    min-height: 250px;
+}
+
+.mini-scroll { 
+    flex: 1; 
+    overflow-y: auto; 
+    padding-right: 5px;
+}
+
+.mini-scroll::-webkit-scrollbar {
+    width: 4px;
+}
+.mini-scroll::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
+}
+
+.status-card {
+    flex: 1;
+    background: white;
+    border-radius: 0 0 12px 12px;
+    height: calc(100% - 25px); 
+    display: flex;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    border: 1px solid #cbd5e1;
+    border-top: none;
+    overflow: hidden;
+}
+    .split { flex: 1; padding: 10px; display: flex; flex-direction: column; min-width: 0; }
+    .split-border { border-right: 2px solid #f1f5f9; }
+
+    .label-st { font-size: 0.84rem !important; font-weight: 900; margin-bottom: 5px; text-transform: uppercase; }
+    .num-st { font-size: 1.6rem !important; font-weight: 900; line-height: 1; margin-bottom: 8px; }
+    
+    .row-rcp { padding: 6px 0; border-bottom: 1px solid #f1f5f9; }
+    .rcp-info { font-size: 0.76rem !important; font-weight: 540; color: #1e293b; line-height: 1.3; }
+    .btn-go { text-decoration: none; font-weight: bold; color: #3b82f6; font-size: 1.1rem; margin-left: 5px; }
+
+    /* TABELA */
+    .table-box {
+        flex: 1; 
+        background: white;
+        border-radius: 12px;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        border: 1px solid #cbd5e1;
+        font-size: 13px;
+    }
+    .table-header-title { padding: 8px 20px; background: #15039ffc; color: white; font-weight: 700; }
+    .table-scroll { flex: 1; overflow-y: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    thead { position: sticky; top: 0; background: #e2e8f0; z-index: 5; }
+    th { padding: 14px; font-size: 0.9rem; font-weight: 800; text-transform: uppercase; border-bottom: 2px solid #cbd5e1; color: #0f172a; }
+    td { padding: 12px 18px; border-bottom: 1px solid #e2e8f0; font-size: 0.95rem; font-weight: 900; color: #1e293b; }
+
+    /* STATUS PILLS */
+    .pill { padding: 6px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 800; display: inline-flex; align-items: center; gap: 6px; }
+    .st-yell { background: #fef3c7; color: #92400e; border: 1px solid #d97706; }
+    .st-yellow { background: #fef9c3; color: #78350f; border: 1px solid #f59e0b; }
+    .st-purp { background: #f5f3ff; color: #5b21b6; border: 1px solid #7c3aed; }
+    .st-green { background: #dcfce7; color: #166534; border: 1px solid #16a34a; }
+    .st-red { background: #fee2e2; color: #991b1b; border: 1px solid #dc2626; }
+    .st-blue { background: #dbeafe; color: #4d64ae; border: 1px solid #3b82f6; }
+    .st-nota { background: #fef3c7; color: #d97706; border: 1px solid #f59e0b; font-weight: bold; }
+    .pri-alta { background: #dc2626 !important; color: white !important;}
+    .pri-concluido { background-color: #28a745 !important; color: white !important; }
+    .pri-media { background: #ea580c !important; color: white !important;}
+    .pri-baixa { background: #475569 !important; color: white !important;}
+
+    .rcp-link {
+        display: inline-block;
+        transition: all 0.3s ease;
+        padding: 2px 8px;
+        border-radius: 4px;
+        text-decoration: none;
+        color: inherit;
+    }
+
+    .rcp-link:hover {
+        transform: translateY(-3px);
+        background-color: #e1e5eb;   
+        filter: drop-shadow(0px 5px 8px rgba(0, 0, 0, 0.25));
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15), 0 0 5px rgba(0, 86, 179, 0.2); 
+        color: #0056b3; 
+    }
+
+@media (max-width: 768px) {
+    .dashboard-wrapper { height: auto; overflow: visible; padding: 10px; margin-top: 0; }
+    .cards-row { flex-direction: column; height: auto; flex: none; gap: 15px; }
+    .status-card { flex-direction: column; height: auto; min-height: 300px; }
+    .split { border-right: none !important; border-bottom: 2px solid #f1f5f9; padding: 15px; }
+    .split:last-child { border-bottom: none; }
+    .num-st { font-size: 1.8rem !important; gap: 20px !important; }
+    .table-box { margin-top: 20px; min-height: 400px; }
+    th:nth-child(2), td:nth-child(2), th:nth-child(4), td:nth-child(4) { display: none; }
+    table td, table th { padding: 8px; font-size: 0.85rem; }
+    .pill { font-size: 0.7rem !important; padding: 4px 8px; }
+}
+</style>
+
+<div class="dashboard-wrapper">
+    <div class="cards-row">
+        <div class="fluxo-section">
+            <div class="fluxo-header bg-entrada">1. FLUXO DE ENTRADA (COMERCIAL / INSPEÇÃO)</div>
+            <div class="status-card">
+                <div class="split split-border">
+                    <div class="label-st text-warning">⏳ FILA ENTRADA <BR><span style="color: red">AGUARDANDO COMERCIAL</span></div>
+                    <div class="num-st text-warning">{{ aguardando_count }}</div>
+                    <div class="mini-scroll">
+                        {% for rcp in aguardando %}
+                        <div class="row-rcp">
+                            <span class="rcp-info"><b>{{ rcp.rcp }}</b> - {{ rcp.cliente|truncatechars:15 }} <br>
+                            <small style="color: rgb(77, 77, 77);">Data de Entrada: {{ rcp.data_entrada_peca|date:"d/m/Y" }}</small> <br>
+                            <small style="color: rgb(235, 119, 3);">LIBERAÇÃO PENDENTE</small>
+                            </span>
+                            <a href="{% url 'editar_rcp' rcp.rcp %}" class="btn-go">→</a>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="split">
+                    <div class="label-st" style="color: #8b5cf6;">🔍 FILA PARA INSPEÇÃO <br><span style="font-size: 11px !important;"> <span>INSP. INICIAL </span> <span style="padding-left: 10px">/</span>  <span style="padding-left: 10px; color: rgb(255, 0, 0)">  INSP. FINAL</span></span></div>
+                    <div class="num-st" style="color: rgb(255, 0, 0); display: flex; gap: 100px; padding-left: 13px;">
+                        <span style="color: #8b5cf6; padding-left: 5px;">{{ liberado_inspecao_count }}</span> 
+                        {{ inspecao_count }}</div>
+                    <div class="mini-scroll">
+                       {% for rcp in inspecao_final %}
+                        <div class="row-rcp">
+                            <span class="rcp-info"><b>{{ rcp.rcp }}</b> - {{ rcp.cliente|truncatechars:15 }} <br>
+                            {% if rcp.data_inspescao_final %}
+                                <small style="color: #2c7d06; font-weight: bold;">| INSPEÇÃO OK {{ rcp.data_inspescao_final|date:"d/m H:i" }}</small>
+                            {% else %}
+                                <small style="color: #dc2626;">AGUARDANDO INSPEÇÃO FINAL</small> <br>
+                                <small style="color: #dc2626;">Prazo da Qualidade: {{ rcp.previsao_entrega_qualidade|date:"d/m H:i" }}</small>
+                            {% endif %}</span>
+                            <a href="{% url 'editar_rcp' rcp.rcp %}" class="btn-go">→</a>
+                        </div>
+                        {% endfor %}
+                        {% for rcp in liberado_inspecao %}
+                        <div class="row-rcp">
+                            <span class="rcp-info"><b>{{ rcp.rcp }}</b> - {{ rcp.cliente|truncatechars:15 }} <br>
+                                {% if rcp.data_inspecao_inicial %}
+                                    <span style="color: #2c7d06; font-weight: bold;">| INSPEÇÃO REALIZADA {{ rcp.data_inspecao_inicial|date:"d/m/Y H:i" }} <br> Prazo da Qualidade: {{ rcp.previsao_entrega_qualidade|date:"d/m/Y H:i" }}</span>
+                                {% else %}
+                                    <span style="color: #5c03d8">| AGUARDANDO INSPEÇÃO <br>
+                                    <span>{% if rcp.previsao_entrega_qualidade %}Prazo da Qualidade: {{ rcp.previsao_entrega_qualidade|date:"d/m/Y H:i" }}{% else %}Prazo: Não informado{% endif %}</span>
+                                    </span>
+                                {% endif %}
+                            </span>
+                            <a href="{% url 'editar_rcp' rcp.rcp %}" class="btn-go">→</a>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="fluxo-section">
+            <div class="fluxo-header bg-producao">2. EM PROCESSO (LIBERADO / INICIO PRODUÇÃO)</div>
+            <div class="status-card">
+                <div class="split split-border">
+                    <div class="label-st text-success">⚙️ NA FILA PARA PRODUÇÃO</div>
+                    <div class="num-st text-success" style="color: #6a7c70 !important">{{ liberado_producao_count }}</div>
+                    <div class="mini-scroll">
+                        {% for rcp in liberado_producao %}
+                        <div class="row-rcp">
+                            <span class="rcp-info"><b>{{ rcp.rcp }}</b> - {{ rcp.cliente|truncatechars:15 }} <br>
+                            {% if rcp.data_inspecao_inicial %}
+                                <small style="color: #2c7d06; font-weight: bold;">INSPEÇÃO REALIZADA {{ rcp.data_inspecao_inicial|date:"d/m H:i" }} <br> LIBERADO P/ PRODUÇÃO</small> <br> 
+                                {% if rcp.previsao_entrega_qualidade %} <small style="color: #2c7d06; font-weight: bold;">Prazo da Qualidade: {{ rcp.previsao_entrega_qualidade|date:"d/m/Y H:i" }}</small>
+                                {% else %}<small style="color: #d85103">Prazo da Qualidade: Não informado</small>
+                                {% endif %}
+                            {% endif %}
+                            </span>
+                            <a href="{% url 'editar_rcp' rcp.rcp %}" class="btn-go">→</a>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="split">
+                   <div class="label-st text-success">⚙️ EM PRODUÇÃO</div>
+                    <div class="num-st text-success">{{ producao_count }}</div>
+                    <div class="mini-scroll">
+                        {% for rcp in em_producao %}
+                        <div class="row-rcp">
+                            <span class="rcp-info"><b>{{ rcp.rcp }}</b> - {{ rcp.cliente|truncatechars:15 }} <br>
+                                <small>{% if rcp.previsao_entrega_qualidade %}Prazo da Qualidade: {{ rcp.previsao_entrega_qualidade|date:"d/m/Y H:i" }}{% else %}Prazo: Não informado{% endif %}</small>
+                            </span>
+                            <a href="{% url 'editar_rcp' rcp.rcp %}" class="btn-go">→</a>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="fluxo-section">
+            <div class="fluxo-header bg-expedicao">3. FINALIZADO (RETIRADA / ENTREGA)</div>
+            <div class="status-card">
+                <div class="split split-border">
+                    <div class="label-st text-info">📦 PRONTO PARA RETIRADA</div>
+                    <div class="num-st text-info">{{ retirada_count }}</div>
+                    <div class="mini-scroll">
+                        {% for rcp in aguardando_retirada %}
+                        <div class="row-rcp">
+                            <span class="rcp-info"><b>{{ rcp.rcp }}</b> - {{ rcp.cliente|truncatechars:15 }} <br>
+                            {% if rcp.nf_saida %}
+                                <small style="color: #16974a; font-weight: bold;">✅NF EMITIDA </small> <br>
+                                <small style="color: #2c7d06; font-weight: bold;">LIBERADO PARA RETIRAR </small>
+                            {% endif %}</span>
+                            <a href="{% url 'editar_rcp' rcp.rcp %}" class="btn-go">→</a>
+                        </div>
+                        {% endfor %}
+                        {% for rcp in aguardando_nota %}
+                        <div class="row-rcp">
+                            <span class="rcp-info"><b>{{ rcp.rcp }}</b> - {{ rcp.cliente|truncatechars:15 }} <br>
+                            <small style="color: #d85103">❌ AGUARDANDO NOTA DE SAIDA</small>
+                            </span>
+                            <a href="{% url 'editar_rcp' rcp.rcp %}" class="btn-go">→</a>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="split">
+                    <div class="label-st text-dark">🤝 ENTREGUES</div>
+                    <div class="num-st text-dark">{{ entregue_ao_cliente_count }}</div>
+                    <div class="mini-scroll">
+                        {% for rcp in entregue_ao_cliente %}
+                        <div class="row-rcp">
+                            <span class="rcp-info"><b>{{ rcp.rcp }}</b> - {{ rcp.cliente|truncatechars:15 }} <br> <span style="color: rgb(0, 179, 255)">ENTREGUE EM: {{ rcp.data_expedicao|date:"d/m H:i" }}</span></span>
+                            <a href="{% url 'editar_rcp' rcp.rcp %}" class="btn-go">→</a>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-box">
+        <div class="table-header-title">📋 LISTA GERAL DE RCPs
+            <span style="padding-left: 120px; color: orange">NOVA FUNCIONALIDADE DE FILTROS NA PRIORIDADE / PRAZO FINAL / STATUS ATUAL</span>
+        </div>
+        <div class="table-scroll">
+            <table>
+                <thead>
+                    <tr>
+                        <th>RCP</th>
+                        <th>OS</th>
+                        <th>CLIENTE</th>
+                        <th class="position-relative">
+                            <span style="cursor: pointer;" onclick="toggleFiltro(event, 'filtroPrioridade')">
+                                PRIORIDADE <i class="bi bi-chevron-down small"></i>
+                            </span>
+                            <div id="filtroPrioridade" class="dropdown-menu shadow-lg p-2" style="display: none; position: absolute; z-index: 1000; min-width: 150px;">
+                                <button class="dropdown-item small" onclick="executarFiltro('URGENTE', 3)">URGENTE</button>
+                                <button class="dropdown-item small" onclick="executarFiltro('MODERADO', 3)">MODERADO</button>
+                                <button class="dropdown-item small" onclick="executarFiltro('BAIXA', 3)">BAIXA</button>
+                                <div class="dropdown-divider"></div>
+                                <button class="dropdown-item small text-danger" onclick="limparFiltro()">LIMPAR FILTRO</button>
+                            </div>
+                        </th>
+                        <th>
+                            <span style="cursor: pointer;" onclick="toggleOrdenacaoData(4)">
+                                PRAZO FINAL <i class="bi bi-sort-numeric-down"></i>
+                            </span>
+                        </th>
+                        <th class="position-relative">
+                            <span style="cursor: pointer;" onclick="toggleFiltro(event, 'filtroStatus')">
+                                STATUS ATUAL <i class="bi bi-chevron-down small"></i>
+                            </span>
+                            <div id="filtroStatus" class="dropdown-menu shadow-lg p-2" style="display: none; position: absolute; z-index: 1000; min-width: 200px;">
+                                <button class="dropdown-item small" onclick="executarFiltro('AGUARDANDO LIBERAÇÃO', 5)">AGUARDANDO LIBERAÇÃO</button>
+                                <button class="dropdown-item small" onclick="executarFiltro('EM PRODUÇÃO', 5)">EM PRODUÇÃO</button>
+                                <button class="dropdown-item small" onclick="executarFiltro('INSPEÇÃO FINAL', 5)">INSPEÇÃO FINAL</button>
+                                <button class="dropdown-item small" onclick="executarFiltro('AGUARDANDO RETIRADA', 5)">AGUARDANDO RETIRADA</button>
+                                <button class="dropdown-item small" onclick="executarFiltro('ENTREGUE AO CLIENTE', 5)">ENTREGUE AO CLIENTE</button>
+                                <div class="dropdown-divider"></div>
+                                <button class="dropdown-item small text-danger" onclick="limparFiltro()">LIMPAR FILTRO</button>
+                            </div>
+                        </th>
+                    </tr>
+                </thead>
+                <tbody id="tabelaCorpo">
+                    {% for rcp in todas_rcps %}
+                    <tr>
+                        <td>
+                            <a href="{% url 'editar_rcp' rcp.rcp %}" class="rcp-link">
+                                {% with x=rcp.prioridade|upper %}
+                                <span class="pill {% if rcp.status == 'ENTREGUE AO CLIENTE' %}pri-concluido{% elif x == 'URGENTE' %}pri-alta{% elif x == 'MODERADO' %}pri-media{% elif x == 'SEM PRIORIDADE' %}pri-baixa{% endif %}" style="padding: 4px 10px; font-size: 0.8rem; width: 100%; display: flex; justify-content: space-between; align-items: center;">
+                                    {{ rcp.rcp }}
+                                    <i class="bi bi-chevron-right" style="font-size: 0.7rem; opacity: 0.7;"></i>
+                                </span>
+                                {% endwith %}
+                            </a>
+                        </td>
+                        <td style="font-size: 0.8rem">{{ rcp.os|default:"-" }}</td>
+                        <td style="font-size: 0.8rem">
+                            {{ rcp.cliente|truncatechars:35 }}
+                            <a href="javascript:void(0)" onclick="abrirModalFoto(this)" data-url="{% url 'fotos_modal' rcp.pk %}" title="Gerenciar Fotos" style="margin-left: 8px;">
+                                {% if rcp.fotos.exists %}
+                                    <i class="bi bi-camera-fill" style="color: #0062c4;"></i> <small style="color: #64748b; font-weight: bold;">{{ rcp.fotos.count }}</small>
+                                {% else %}
+                                    <i class="bi bi-camera" style="color: #cbd5e1;"></i>
+                                {% endif %}
+                            </a>
+                        </td>
+                        <td>
+                            {% with p=rcp.prioridade|upper %}
+                            <span class="pill {% if rcp.status == 'ENTREGUE AO CLIENTE' %}pri-concluido{% elif p == 'URGENTE' %}pri-alta{% elif p == 'MODERADO' %}pri-media{% else %}pri-baixa{% endif %}">
+                                <span style="font-size: 0.7rem">{% if rcp.status == 'ENTREGUE AO CLIENTE' %} PROCESSO CONCLUÍDO {% else %} {{ p }} {% endif %}</span>
+                            </span>
+                            {% endwith %}
+                        </td>
+                        <td><span class="fw-bold text-primary" style="font-size: 13px !important;">{{ rcp.previsao_entrega_qualidade|date:"d/m/Y H:i" }}</span></td>
+                        <td>
+                            <span class="pill {% if rcp.status == 'AGUARDANDO LIBERAÇÃO' %}st-yell{% elif rcp.status == 'EM PRODUÇÃO' %}st-green{% elif rcp.status == 'ENTREGUE AO CLIENTE' %}st-blue{% else %}st-purp{% endif %}">
+                                <span style="font-size: 0.7rem">{{ rcp.status }}</span>
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="fotoModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content" id="modalFotoContent" style="border-radius: 20px;">
+            <div class="modal-body" id="conteudoModalFoto">
+                <div class="text-center p-5">
+                    <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Carregando...</span></div>
+                </div>
+            </div>
+            <div class="modal-resizer" id="modalResizer"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+let estaOrdenadoPorData = false; 
+let ordemOriginalDasLinhas = [];
+
+document.addEventListener('DOMContentLoaded', function() {
+    const tabelaCorpo = document.getElementById('tabelaCorpo');
+    if (tabelaCorpo) {
+        ordemOriginalDasLinhas = Array.from(tabelaCorpo.querySelectorAll('tr'));
+    }
+    recarregarTooltips();
+    initModalResize(); // Inicia a lógica de redimensionar
+});
+
+function recarregarTooltips() {
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+}
+
+// LOGICA DO MODAL DE FOTO
+function abrirModalFoto(el) {
+    const url = el.getAttribute('data-url');
+    const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('fotoModal'));
+    modal.show();
+    fetch(url).then(r => r.text()).then(h => {
+        document.getElementById('conteudoModalFoto').innerHTML = h;
+    });
+}
+
+// --- FUNÇÃO DE REDIMENSIONAR O MODAL (CORRIGIDA) ---
+function initModalResize() {
+    const modalContent = document.getElementById('modalFotoContent');
+    
+    // Criar os elementos de redimensionamento dinamicamente se não existirem
+    if (!document.querySelector('.resizer-diagonal')) {
+        const diag = document.createElement('div'); diag.className = 'resizer-diagonal';
+        const right = document.createElement('div'); right.className = 'resizer-right';
+        const bottom = document.createElement('div'); bottom.className = 'resizer-bottom';
+        modalContent.appendChild(diag);
+        modalContent.appendChild(right);
+        modalContent.appendChild(bottom);
+    }
+
+    let startX, startY, startWidth, startHeight, activeType;
+
+    const startDrag = (e, type) => {
+        e.preventDefault();
+        activeType = type;
+        startX = e.clientX;
+        startY = e.clientY;
+        startWidth = parseInt(document.defaultView.getComputedStyle(modalContent).width, 10);
+        startHeight = parseInt(document.defaultView.getComputedStyle(modalContent).height, 10);
+        
+        document.documentElement.addEventListener('mousemove', doResize, false);
+        document.documentElement.addEventListener('mouseup', stopResize, false);
+    };
+
+    // Eventos para cada tipo de redimensionamento
+    modalContent.querySelector('.resizer-right').addEventListener('mousedown', (e) => startDrag(e, 'width'));
+    modalContent.querySelector('.resizer-bottom').addEventListener('mousedown', (e) => startDrag(e, 'height'));
+    modalContent.querySelector('.resizer-diagonal').addEventListener('mousedown', (e) => startDrag(e, 'both'));
+
+    function doResize(e) {
+        if (activeType === 'width' || activeType === 'both') {
+            const newWidth = startWidth + (e.clientX - startX);
+            if (newWidth > 450) modalContent.style.width = newWidth + 'px';
+        }
+        if (activeType === 'height' || activeType === 'both') {
+            const newHeight = startHeight + (e.clientY - startY);
+            if (newHeight > 300) modalContent.style.height = newHeight + 'px';
+        }
+    }
+
+    function stopResize() {
+        document.documentElement.removeEventListener('mousemove', doResize, false);
+        document.documentElement.removeEventListener('mouseup', stopResize, false);
+    }
+}
+// FILTROS DA TABELA
+function toggleOrdenacaoData(indexColuna) {
+    if (estaOrdenadoPorData) { limparFiltro(); } 
+    else { executarOrdenacaoData(indexColuna); estaOrdenadoPorData = true; }
+}
+
+function executarOrdenacaoData(indexColuna) {
+    const tabelaCorpo = document.getElementById('tabelaCorpo');
+    let linhas = Array.from(ordemOriginalDasLinhas).filter(l => l.cells[5]?.innerText.trim() !== "ENTREGUE AO CLIENTE");
+    linhas.sort((a, b) => {
+        const parse = (t) => {
+            const p = t.trim().split(/\s+/); if(!p[0]) return new Date(0);
+            const [d, m, y] = p[0].split('/');
+            return new Date(`${y}-${m}-${d}T${p[1] || '00:00'}`);
+        };
+        return parse(a.cells[indexColuna].innerText) - parse(b.cells[indexColuna].innerText);
+    });
+    tabelaCorpo.innerHTML = "";
+    linhas.forEach(l => tabelaCorpo.appendChild(l));
+}
+
+function executarFiltro(valor, indexColuna) {
+    const tabelaCorpo = document.getElementById('tabelaCorpo');
+    const busca = valor.toUpperCase();
+    tabelaCorpo.innerHTML = "";
+    ordemOriginalDasLinhas.forEach(l => {
+        if (l.cells[indexColuna].innerText.toUpperCase().includes(busca)) {
+            tabelaCorpo.appendChild(l);
+        }
+    });
+    fecharMenus();
+}
+
+function limparFiltro() {
+    const tabelaCorpo = document.getElementById('tabelaCorpo');
+    tabelaCorpo.innerHTML = "";
+    ordemOriginalDasLinhas.forEach(l => tabelaCorpo.appendChild(l));
+    estaOrdenadoPorData = false;
+    fecharMenus();
+}
+
+function toggleFiltro(e, id) {
+    e.stopPropagation();
+    fecharMenus();
+    document.getElementById(id).style.display = 'block';
+}
+
+function fecharMenus() { document.querySelectorAll('.dropdown-menu').forEach(m => m.style.display = 'none'); }
+window.onclick = (e) => { if (!e.target.closest('.position-relative')) fecharMenus(); };
+
+
+let modalEstaMaximizado = false;
+let tamanhoAntesDeMaximizar = { width: '', height: '' };
+
+function toggleMaximizar() {
+    const modalContent = document.getElementById('modalFotoContent');
+    const icon = document.getElementById('iconMaximizar');
+
+    if (!modalEstaMaximizado) {
+        // Salva o tamanho atual para poder restaurar depois
+        tamanhoAntesDeMaximizar.width = modalContent.style.width;
+        tamanhoAntesDeMaximizar.height = modalContent.style.height;
+
+        // Aplica o tamanho total (Tela Cheia)
+        modalContent.style.width = '98vw';
+        modalContent.style.height = '96vh';
+        modalContent.style.maxWidth = 'none';
+        
+        if(icon) icon.className = 'bi bi-window-stack';
+        modalEstaMaximizado = true;
+    } else {
+        // Restaura o tamanho que estava antes
+        modalContent.style.width = tamanhoAntesDeMaximizar.width || '1000px';
+        modalContent.style.height = tamanhoAntesDeMaximizar.height || 'auto';
+        
+        if(icon) icon.className = 'bi bi-window-fullscreen';
+        modalEstaMaximizado = false;
+    }
+}
+
+</script>
+{% endblock %}

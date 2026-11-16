@@ -1,0 +1,17 @@
+<div style="padding: 20px; font-family: sans-serif;">
+    <h3>Arquivos de: {{ cliente }}</h3>
+    <hr>
+    <ul>
+        {% for arq in arquivos %}
+            <li style="margin-bottom: 10px;">
+                <a href="{{ arq.url }}" target="_blank" style="text-decoration: none; color: #007bff; font-weight: bold;">
+                    {% if arq.nome|lower|slice:"-4:" == ".pdf" %} 📄 {% else %} 📊 {% endif %}
+                    {{ arq.nome }}
+                </a>
+            </li>
+        {% empty %}
+            <p>Nenhum arquivo encontrado para este cliente.</p>
+        {% endfor %}
+    </ul>
+    <button onclick="window.close()">Fechar Janela</button>
+</div>

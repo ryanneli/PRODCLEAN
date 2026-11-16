@@ -1,0 +1,18 @@
+{% load static %}
+{% extends 'base.html' %}
+{% block content %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <ul>
+        {% for obra in obras %}
+            <li>{{ obra.cliente }} - {{ obra.descricao_obra }}</li>
+        {% endfor %}
+    </ul>
+</body>
+</html>

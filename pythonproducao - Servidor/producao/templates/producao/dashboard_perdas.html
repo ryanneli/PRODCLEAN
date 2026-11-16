@@ -1,0 +1,674 @@
+{% extends 'producao/base.html' %}
+{% load static %}
+{% block content %}
+
+<style>
+    .motivo-truncado {
+        max-width: 150px; /* Ajuste a largura conforme sua necessidade */
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: block;
+    }
+</style>
+
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-md-3">
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h6 class="mb-0">Operadores</h6>
+            <div class="d-flex gap-2">
+                
+                <button class="btn btn-sm btn-light" data-bs-toggle="collapse" data-bs-target="#formNovoFunc">+ Novo</button>
+            </div>
+        </div>
+        <div class="card-body p-2">
+            <div class="collapse mb-3 p-2 border-bottom" id="formNovoFunc">
+                <input type="text" id="nomeNovoFunc" class="form-control form-control-sm mb-2" placeholder="Nome do operador">
+                <button class="btn btn-sm btn-success w-100" onclick="adicionarFuncionario()">Salvar Operador</button>
+            </div>
+
+            <div class="list-group list-group-flush" id="lista-funcionarios">
+                {% for f in funcionarios %}
+                <div class="list-group-item d-flex justify-content-between align-items-center border-0 rounded mb-1 shadow-sm">
+                    <span class="flex-grow-1" style="cursor: pointer;" onclick="selecionarFuncionario('{{ f.id }}', '{{ f.nome }}')">
+                        👤 {{ f.nome }}
+                    </span>
+                    <div class="d-flex">
+                        <button class="btn btn-sm btn-link text-primary p-0 ms-2" onclick="editarUsuario('{{ f.id }}', '{{ f.nome }}')">✏️</button>
+                        <button class="btn btn-sm btn-link text-danger p-0 ms-2" onclick="excluirUsuario('{{ f.id }}')">🗑️</button>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center p-3 text-muted small">Nenhum operador cadastrado.</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+        <div class="col-md-9">
+            <div class="card shadow-sm mb-4 d-none" id="painel-detalhes">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Histórico de: <strong id="nome-func-selecionado" class="text-primary"></strong></h5>
+                    <button class="btn btn-danger btn-sm shadow-sm" data-bs-toggle="modal" data-bs-target="#modalLancamento">
+                        ⚠️ Registrar Peça Matada
+                    </button>
+                </div>
+                <div class="card-body p-0" style="max-height: 210px; overflow-y: auto;">
+                    <table class="table table-sm table-hover mb-0 text-center" style="table-layout: fixed; width: 100%;">
+                    <thead class="table-dark sticky-top">
+                        <tr>
+                            <th>Data / Hora</th>
+                            <th>RCP Vinculada</th>
+                            <th>Qtd Peças</th>
+                            <th>Motivo</th>
+                            <th>Resolução</th> </tr>
+                    </thead>
+                    <tbody id="tabela-historico-corpo">
+                        </tbody>
+                </table>
+                </div>
+            </div>
+
+            <div class="alert alert-secondary text-center shadow-sm" id="aviso-vazio">
+                Selecione um funcionário na lista lateral para visualizar o histórico e realizar lançamentos.
+            </div>
+
+            <div class="card shadow-sm mt-3">
+                <div class="card-header bg-dark text-white">
+                    <h6 class="mb-0">Estatísticas Gerais de Perdas</h6>
+                </div>
+                <div class="card-body">
+                    <canvas id="graficoPerdas" style="max-height: 250px;"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalLancamento" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">Novo Registro de peça matada</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="form-perda" class="row g-3">
+                    <input type="hidden" id="func-id-input">
+                    <div class="col-md-6">
+                        <label class="form-label">Quantidade Matada</label>
+                        <input type="number" id="qtd-input" class="form-control" min="1" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Nº da RCP (Opcional)</label>
+                        <input type="text" id="os-input" class="form-control" placeholder="Ex: 1945">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Motivo / Peça Errada</label>
+                        <input type="text" id="motivo-input" class="form-control" placeholder="Ex: burrão matou a peça">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Data e Hora da Ocorrência</label>
+                        <input type="datetime-local" id="data-input" class="form-control" lang="pt-BR" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" onclick="salvarOcorrencia()">Gravar Registro</button>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="modalEdicaoCompleta" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Editar Registro de Perda</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="conteudo-modal-edicao">
+                <div class="text-center p-5">Carregando...</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalGerenciarUsuarios" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Gerenciar Funcionários</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <ul class="list-group">
+                    {% for func in todos_funcionarios %}
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        {{ func.nome }}
+                        <div>
+                            <button class="btn btn-sm btn-link text-primary" onclick="editarUsuario('{{ func.id }}', '{{ func.nome }}')">✏️</button>
+                            <button class="btn btn-sm btn-link text-danger" onclick="excluirUsuario('{{ func.id }}')">🗑️</button>
+                        </div>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalEditarUsuario" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h6 class="modal-title">Editar Nome</h6>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="edit-user-id">
+                <input type="text" id="edit-user-nome" class="form-control" placeholder="Novo nome">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button class="btn btn-sm btn-primary" onclick="confirmarEdicaoUsuario()">Salvar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalConfirmarExclusao" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h6 class="modal-title">Confirmar Exclusão</h6>
+            </div>
+            <div class="modal-body">
+                <p>Tem certeza que deseja excluir este operador?</p>
+                <input type="hidden" id="delete-user-id">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button class="btn btn-sm btn-danger" onclick="confirmarExclusao()">Sim, excluir</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<div class="modal fade" id="modalFoto" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Gerenciar Fotos</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div id="conteudoModalFoto">
+                </div>
+        </div>
+    </div>
+</div>
+
+
+
+
+<script src="{% static 'js/chart.js' %}"></script>
+<script>
+    let meuGrafico;
+    let atualFuncionarioId = null;
+
+    // 1. Função chamada ao clicar no lápis: Abre o Modal de Edição preenchido
+    // Substitua o botão de edição na tabela pelo chamado desta função:
+    function abrirModalEdicao(id) {
+        const modalEl = document.getElementById('modalEdicaoCompleta');
+        const content = document.getElementById('conteudo-modal-edicao');
+        
+        // Abre a modal
+        const myModal = new bootstrap.Modal(modalEl);
+        myModal.show();
+        
+        // Carrega o conteúdo
+        content.innerHTML = '<div class="text-center p-3">Carregando...</div>';
+        fetch(`/perdas/modal-edicao/${id}/`) // Ajuste a URL conforme seu urls.py
+            .then(res => res.text())
+            .then(html => {
+                content.innerHTML = html;
+                GLightbox({ selector: '.glightbox' });
+            });
+    }
+
+    // Handler para salvar os DADOS 
+    document.body.addEventListener('submit', function(e) {
+    if (e.target && e.target.id === 'form-edicao-dados') {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        
+        fetch(e.target.action, {
+            method: 'POST',
+            body: formData,
+            headers: {'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value}
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.status === 'sucesso') {
+                // O alert foi removido daqui
+                
+                // Recarrega o histórico na tela principal
+                carregarHistorico(atualFuncionarioId);
+                
+                // Fecha o modal
+                const modalEl = document.getElementById('modalEdicaoCompleta');
+                const modalInstance = bootstrap.Modal.getInstance(modalEl);
+                if (modalInstance) {
+                    modalInstance.hide();
+                }
+            }
+        })
+        .catch(err => console.error("Erro ao salvar:", err));
+        }
+    });
+    // 2. Função que faz o envio AJAX do Modal de Edição para o Django
+    function salvarEdicaoMotivo() {
+        const id = document.getElementById('edit-perda-id').value;
+        const novoMotivo = document.getElementById('edit-motivo-input').value;
+
+        // Usando URLSearchParams em vez de FormData
+        const params = new URLSearchParams();
+        params.append('perda_id', id);
+        params.append('motivo', novoMotivo);
+        params.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+
+        fetch("{% url 'editar_motivo_ajax' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: params
+        })
+        .then(res => res.json())
+        .then(data => {
+            if(data.status === 'sucesso') {
+                const modalEl = document.getElementById('modalEditarMotivo');
+                bootstrap.Modal.getInstance(modalEl).hide();
+                carregarHistorico(atualFuncionarioId);
+            } else {
+                alert('Erro retornado pelo servidor: ' + data.message);
+            }
+        })
+        .catch(err => {
+            console.error("Erro na conexão:", err);
+        });
+    }
+
+    function selecionarFuncionario(id, nome) {
+        atualFuncionarioId = id;
+        document.getElementById('aviso-vazio').classList.add('d-none');
+        document.getElementById('painel-detalhes').classList.remove('d-none');
+        
+        document.getElementById('nome-func-selecionado').innerText = nome;
+        document.getElementById('func-id-input').value = id;
+
+        const agora = new Date();
+        const offset = agora.getTimezoneOffset() * 60000;
+        const dataLocal = new Date(agora.getTime() - offset).toISOString().slice(0, 16);
+        document.getElementById('data-input').value = dataLocal;
+
+        document.querySelectorAll('#lista-funcionarios button').forEach(b => b.classList.remove('active', 'bg-primary', 'text-white'));
+        const btn = document.getElementById('btn-func-' + id);
+        if (btn) btn.classList.add('active');
+
+        carregarHistorico(id);
+    }
+
+    function carregarHistorico(id) {
+        fetch('/producao/perdas/historico/' + id + '/')
+        .then(res => res.json())
+        .then(data => {
+            const tbody = document.getElementById('tabela-historico-corpo');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            if(data.status === 'sucesso') {
+                if(data.historico.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="5" class="text-muted text-center py-3">Nenhum registro encontrado.</td></tr>';
+                    return;
+                }
+                
+                data.historico.forEach(item => {
+                    const idRegistro = item.id || '';
+                    const numRcp = item.rcp; 
+                    // Garantir que resolução exista (caso seja null, mostra '-')
+                    const resolucao = item.resolucao || '-';
+
+                let btnFotos = `<a href="javascript:void(0)" 
+                    onclick="abrirModalFoto(this)" 
+                    data-url="/chat/fotos-matada/${idRegistro}/" 
+                    title="Gerenciar Fotos" 
+                    style="margin-left: 8px;">
+                    <i class="bi bi-camera-fill" style="color: #dc3545;"></i>
+                    </a>`;
+
+                let colunaRcp = (numRcp !== "N/A") 
+                    ? `<div class="d-flex align-items-center justify-content-center">
+                        <a href="/editar/${numRcp}/" target="_blank" class="fw-bold text-decoration-none">${numRcp}</a>
+                        ${btnFotos}
+                    </div>` 
+                    : `<div class="text-center text-muted">N/A</div>`;
+
+                    let linha = `<tr>
+                        <td class="text-center align-middle">${item.data}</td>
+                        
+                        <td class="text-center align-middle">${colunaRcp}</td> 
+                        
+                        <td class="text-center align-middle fw-bold">${item.quantidade}</td>
+                        <td class="align-middle">${item.motivo}</td>
+                        <td class="align-middle">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <span class="text-truncate" title="${item.resolucao}" style="max-width: 150px; cursor: default;">
+                                    ${item.resolucao}
+                                </span>
+                                <button class="btn btn-sm p-0 ms-2" onclick="abrirModalEdicao(${item.id})" title="Editar">
+                                    ✏️
+                                </button>
+                            </div>
+                        </td>
+                    </tr>`;
+                    
+                    tbody.innerHTML += linha;
+                });
+            }
+        })
+        .catch(err => console.error("Erro ao carregar histórico:", err));
+    }
+    function salvarOcorrencia() {
+        const id = document.getElementById('func-id-input').value;
+        const qtd = document.getElementById('qtd-input').value;
+        const motivo = document.getElementById('motivo-input').value;
+        const osId = document.getElementById('os-input').value;
+        const dataOcorrencia = document.getElementById('data-input').value;
+
+        if(!qtd) { alert('Digite a quantidade.'); return; }
+        if(!dataOcorrencia) { alert('Por favor, selecione a data e a hora da ocorrência.'); return; }
+
+        let formData = new FormData();
+        formData.append('funcionario_id', id);
+        formData.append('quantidade', qtd);
+        formData.append('motivo', motivo);
+        formData.append('os_id', osId);
+        formData.append('data_ocorrencia', dataOcorrencia);
+        formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+
+        fetch("{% url 'salvar_perda_ajax' %}", {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if(data.status === 'sucesso') {
+                const modalEl = document.getElementById('modalLancamento');
+                if (modalEl) {
+                    const modalInst = bootstrap.Modal.getInstance(modalEl);
+                    if (modalInst) modalInst.hide();
+                }
+
+                document.getElementById('qtd-input').value = '';
+                document.getElementById('motivo-input').value = '';
+                document.getElementById('os-input').value = '';
+
+                carregarHistorico(id);
+                carregarDadosGrafico(); 
+            } else {
+                alert('Erro: ' + data.message);
+            }
+        });
+    }
+
+    function gerarCores(quantidade) {
+        let cores = [];
+        // Calculamos o 'passo' para dividir os 360 graus do círculo de cores
+        const passo = 360 / quantidade;
+
+        for (let i = 0; i < quantidade; i++) {
+            // H: Hue (0-360) -> Define a cor no círculo
+            // S: Saturation (70%) -> Define a vivacidade
+            // L: Lightness (60%) -> Define o brilho
+            // A: Alpha (0.7) -> Define a transparência
+            const h = i * passo;
+            cores.push(`hsla(${h}, 70%, 60%, 0.7)`);
+        }
+        return cores;
+    }
+
+    function carregarDadosGrafico() {
+        fetch("{% url 'dados_grafico_ajax' %}")
+        .then(res => res.json())
+        .then(data => {
+            const canvas = document.getElementById('graficoPerdas');
+            if (!canvas) return;
+            
+            const ctx = canvas.getContext('2d');
+            
+            if (typeof meuGrafico !== 'undefined' && meuGrafico !== null) {
+                meuGrafico.destroy();
+            }
+
+            // Gera as cores baseada na quantidade de labels recebidos
+            const cores = gerarCores(data.labels.length);
+
+            meuGrafico = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: data.labels,
+                    datasets: [{
+                        label: 'Estatísticas de peças matadas (Todos os Operadores)',
+                        data: data.valores,
+                        backgroundColor: cores,
+                        // Para as bordas, pegamos a mesma cor mas mudamos o Alpha para 1 (sólido)
+                        borderColor: cores.map(c => c.replace('0.7', '1')), 
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { precision: 0 }
+                        },
+                        x: {
+                            barPercentage: 0.3,
+                            categoryPercentage: 0.5
+                        }
+                    }
+                }
+            });
+        })
+        .catch(error => {
+            console.error("Erro ao carregar o gráfico:", error);
+        });
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        carregarDadosGrafico();
+    });
+
+    function editarUsuario(id, nomeAtual) {
+        document.getElementById('edit-user-id').value = id;
+        document.getElementById('edit-user-nome').value = nomeAtual;
+        var myModal = new bootstrap.Modal(document.getElementById('modalEditarUsuario'));
+        myModal.show();
+    }
+
+    function confirmarEdicaoUsuario() {
+        const id = document.getElementById('edit-user-id').value;
+        const novoNome = document.getElementById('edit-user-nome').value;
+
+        fetch("{% url 'editar_usuario_ajax' %}", {
+            method: 'POST',
+            headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+            body: new URLSearchParams({ 'id': id, 'nome': novoNome })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'sucesso') location.reload();
+            else alert('Erro: ' + data.message);
+        });
+    }
+
+    function excluirUsuario(id) {
+        document.getElementById('delete-user-id').value = id;
+        var myModal = new bootstrap.Modal(document.getElementById('modalConfirmarExclusao'));
+        myModal.show();
+    }
+
+// FUNÇÃO QUE REALMENTE EXECUTA A EXCLUSÃO
+    function confirmarExclusao() {
+        const id = document.getElementById('delete-user-id').value;
+
+        fetch("{% url 'excluir_usuario_ajax' %}", {
+            method: 'POST',
+            headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+            body: new URLSearchParams({ 'id': id })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'sucesso') {
+                location.reload();
+            } else {
+                alert('Erro: ' + data.message);
+            }
+        });
+    }
+
+    function adicionarFuncionario() {
+        const nome = document.getElementById('nomeNovoFunc').value;
+        
+        if (!nome) {
+            alert("Por favor, digite o nome do operador.");
+            return;
+        }
+
+        // A função fetch envia o dado para o Django
+        fetch("{% url 'adicionar_funcionario_ajax' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: new URLSearchParams({ 'nome': nome })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'sucesso') {
+                location.reload(); // Recarrega a página para mostrar o novo nome na lista
+            } else {
+                alert('Erro ao salvar: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Erro na requisição:', error);
+        });
+        }
+
+    window.abrirModalFoto = function(elemento) {
+        const url = elemento.getAttribute('data-url');
+        const modalEl = document.getElementById('modalFoto');
+        const modalContent = document.getElementById('conteudoModalFoto');
+
+        // --- VERIFICAÇÃO DE SEGURANÇA ---
+        if (!modalContent) {
+            console.error("ERRO: Elemento 'conteudoModalFoto' não encontrado no DOM.");
+            alert("Erro: A estrutura do modal não foi encontrada na página.");
+            return; // Para a execução aqui, evitando o erro de 'null'
+        }
+        // --------------------------------
+
+        // Abre o modal de carregamento
+        modalContent.innerHTML = '<div class="modal-body text-center p-5">Carregando...</div>';
+        
+        // Verifica se modalEl existe antes de tentar instanciar
+        if (modalEl) {
+            const myModal = new bootstrap.Modal(modalEl);
+            myModal.show();
+        } else {
+            console.error("ERRO: Elemento 'modalFoto' não encontrado.");
+            return;
+        }
+
+        // Busca o HTML da view no Django
+        fetch(url)
+            .then(response => response.text())
+            .then(html => {
+                modalContent.innerHTML = html;
+            })
+            .catch(err => {
+                modalContent.innerHTML = '<div class="modal-body text-danger">Erro ao carregar fotos.</div>';
+                console.error(err);
+            });
+    };
+</script>
+
+<link rel="stylesheet" href="{% static 'css/glightbox.min.css' %}" />
+<script src="{% static 'js/glightbox.min.js' %}"></script>
+
+<script>
+    let myLightbox = null;
+
+    // Função para iniciar ou reiniciar o Lightbox
+    function initLightbox() {
+        // Se já existe uma instância, destrói para limpar a memória
+        if (myLightbox !== null) {
+            myLightbox.destroy();
+        }
+        // Cria uma nova instância
+        myLightbox = GLightbox({
+            selector: '.glightbox',
+            loop: true,
+            touchNavigation: true
+        });
+    }
+
+    // Monitora quando a modal abre
+    document.addEventListener('shown.bs.modal', function () {
+        initLightbox();
+    });
+
+    // Monitora o envio do formulário via delegação (para funcionar mesmo após o AJAX)
+    document.body.addEventListener('submit', function(e) {
+        if (e.target && e.target.id === 'form-upload-foto') {
+            e.preventDefault();
+            
+            const btn = e.target.querySelector('button[type="submit"]');
+            btn.innerText = "Salvando...";
+            btn.disabled = true;
+
+            const formData = new FormData(e.target);
+
+            fetch(e.target.action, {
+                method: 'POST',
+                body: formData, 
+                headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+            })
+            .then(response => response.text())
+            .then(html => {
+                // Atualiza o conteúdo da modal
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                document.getElementById('corpo-modal-fotos').innerHTML = 
+                    doc.getElementById('corpo-modal-fotos').innerHTML;
+                
+                // REINICIALIZA o GLightbox para os novos elementos
+                initLightbox();
+                
+                btn.innerText = "Salvar";
+                btn.disabled = false;
+            });
+        }
+    });
+</script>
+
+
+{% endblock %}

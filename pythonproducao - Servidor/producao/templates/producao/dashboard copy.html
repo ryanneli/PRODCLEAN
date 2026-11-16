@@ -1,0 +1,352 @@
+{% extends "producao/base.html" %}
+{% load static %}
+{% block content %}
+<style>
+.dashboard-wrapper {
+    height: calc(100vh - 120px); 
+    display: flex;
+    margin-top: -10px;
+    flex-direction: column;
+    gap: 8px;
+    overflow: hidden; /* Impede o scroll na página inteira */
+    box-sizing: border-box;
+}
+
+    /* CABEÇALHOS DE FLUXO */
+    .fluxo-section { flex: 1; display: flex; flex-direction: column; }
+    .fluxo-header {
+        font-size: 0.75rem;
+        font-weight: 900;
+        text-align: center;
+        padding: 5px;
+        border-radius: 10px 10px 0 0;
+        text-transform: uppercase;
+        margin-bottom: -1px;
+        color: white;
+        letter-spacing: 1px;
+    }
+    .bg-entrada { background: #f59e0b; border: 1px solid #d97706; } 
+    .bg-producao { background: #10b981; border: 1px solid #059669; } 
+    .bg-expedicao { background: #3b82f6; border: 1px solid #2563eb; } 
+
+    /* CARDS DE STATUS */
+    /* 3. CARDS-ROW - Define uma altura fixa para a linha de cards */
+.cards-row { 
+    display: flex; 
+    gap: 8px; 
+    flex: 0 0 250px; /* Trava a altura da linha de cards em 250px (cabeçalho + card) */
+    min-height: 250px;
+}
+
+mini-scroll { 
+    flex: 1; 
+    overflow-y: auto; /* Habilita o scroll vertical */
+    padding-right: 5px;
+}
+
+/* Personalização da barra de scroll para ficar discreta */
+.mini-scroll::-webkit-scrollbar {
+    width: 4px;
+}
+.mini-scroll::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
+}
+
+/* STATUS-CARD - Ocupa 100% da altura da linha definida acima */
+.status-card {
+    flex: 1;
+    background: white;
+    border-radius: 0 0 12px 12px;
+    height: calc(100% - 25px); /* Desconta o tamanho do fluxo-header */
+    display: flex;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    border: 1px solid #cbd5e1;
+    border-top: none;
+    overflow: hidden; /* Garante que o conteúdo não vaze */
+}
+    .split { flex: 1; padding: 10px; display: flex; flex-direction: column; min-width: 0; }
+    .split-border { border-right: 2px solid #f1f5f9; }
+
+    .label-st { font-size: 0.9rem !important; font-weight: 900; margin-bottom: 5px; text-transform: uppercase; }
+    .num-st { font-size: 2.2rem !important; font-weight: 900; line-height: 1; margin-bottom: 8px; }
+    
+    .mini-scroll { flex: 1; overflow-y: auto; }
+    .row-rcp { padding: 6px 0; border-bottom: 1px solid #f1f5f9; }
+    .rcp-info { font-size: 0.8rem !important; font-weight: 700; color: #1e293b; line-height: 1.3; }
+    .btn-go { text-decoration: none; font-weight: bold; color: #3b82f6; font-size: 1.1rem; margin-left: 5px; }
+
+    /* TABELA */
+    .table-box {
+        flex: 1; 
+        background: white;
+        border-radius: 12px;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        border: 1px solid #cbd5e1;
+    }
+    .table-header-title { padding: 8px 20px; background: #15039ffc; color: white; font-weight: 700; }
+    .table-scroll { flex: 1; overflow-y: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    thead { position: sticky; top: 0; background: #e2e8f0; z-index: 5; }
+    th { padding: 14px; font-size: 0.9rem; font-weight: 800; text-transform: uppercase; border-bottom: 2px solid #cbd5e1; color: #0f172a; }
+    td { padding: 12px 18px; border-bottom: 1px solid #e2e8f0; font-size: 0.95rem; font-weight: 900; color: #1e293b; }
+
+    /* STATUS PILLS */
+    .pill { padding: 6px 12px; border-radius: 8px; font-size: 0.8rem; font-weight: 800; display: inline-flex; align-items: center; gap: 6px; }
+    .st-yell { background: #fef3c7; color: #92400e; border: 1px solid #d97706; }
+    .st-yellow { background: #fef9c3; color: #78350f; border: 1px solid #f59e0b; }
+    .st-purp { background: #f5f3ff; color: #5b21b6; border: 1px solid #7c3aed; }
+    .st-green { background: #dcfce7; color: #166534; border: 1px solid #16a34a; }
+    .st-red { background: #fee2e2; color: #991b1b; border: 1px solid #dc2626; }
+    .st-blue { background: #dbeafe; color: #4d64ae; border: 1px solid #3b82f6; }
+    .st-nota { background: #fef3c7; color: #d97706; border: 1px solid #f59e0b; font-weight: bold; }
+    .pri-alta { background: #dc2626 !important; color: white !important; }
+    .pri-media { background: #ea580c !important; color: white !important; }
+    .pri-baixa { background: #475569 !important; color: white !important; }
+
+    /* --- AJUSTE PARA CELULAR (Telas menores que 768px) --- */
+@media (max-width: 768px) {
+    .dashboard-wrapper {
+        height: auto; /* Permite que a página cresça para baixo */
+        overflow: visible; /* Libera o scroll natural do celular */
+    }
+
+    .cards-row {
+        flex-direction: column; /* Empilha os fluxos (Entrada, Produção, Expedição) */
+        height: auto;
+        flex: none; /* Remove a trava de 250px */
+        gap: 20px; /* Dá um espaço maior entre os blocos no celular */
+    }
+
+    .status-card {
+        height: 400px; /* No celular, cada card ganha uma altura fixa confortável */
+        flex: none;
+        display: block; /* Se quiser que os sub-cards (split) também empilhem, use flex-direction: column aqui */
+    }
+
+    .table-box {
+        margin-top: 20px;
+        min-height: 400px; /* Garante que a tabela não suma */
+    }
+}
+
+
+</style>
+
+<div class="dashboard-wrapper">
+    <div class="cards-row">
+        <div class="fluxo-section">
+            <div class="fluxo-header bg-entrada">1. FLUXO DE ENTRADA (COMERCIAL / INSPEÇÃO)</div>
+            <div class="status-card">
+                <div class="split split-border">
+                    <div class="label-st text-warning">⏳ FILA ENTRADA <BR><span style="color: red">AGUARDANDO COMERCIAL</span></div>
+                    <div class="num-st text-warning">{{ aguardando_count }}</div>
+                    <div class="mini-scroll">
+                        {% for rcp in aguardando %}
+                        <div class="row-rcp">
+                            <span class="rcp-info"><b>{{ rcp.rcp }}</b> - {{ rcp.cliente|truncatechars:15 }} <br>
+                            <small style="color: rgb(77, 77, 77);">Data de Entrada: {{ rcp.data_entrada_peca|date:"d/m/Y" }}</small> <br>
+                            <small style="color: rgb(235, 119, 3);">LIBERAÇÃO PENDENTE</small>
+                        </span>
+                            <a href="{% url 'editar_rcp' rcp.rcp %}" class="btn-go">→</a>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="split">
+                    <div class="label-st" style="color: #8b5cf6;">🔍 FILA INSPEÇÃO <br><span style="font-size: 12px !important;"> <span>AGUARDANDO </span> / <span style="padding-left: 03px; color: green">  LIBERADO PROD.</span></span></div>
+                    <div class="num-st" style="color: green; display: flex; gap: 100px; padding-left: 15px;">
+                        <span style="color: #8b5cf6; padding-left: 5px;">{{ liberado_inspecao_count }}</span> 
+                        {{ liberado_producao_count }}</div>
+                    <div class="mini-scroll">
+                        {% for rcp in liberado_producao %}
+                        <div class="row-rcp">
+                            <span class="rcp-info"><b>{{ rcp.rcp }}</b> - {{ rcp.cliente|truncatechars:15 }} <br>
+                            {% if rcp.data_inspecao_inicial %}
+                                <small style="color: #2c7d06; font-weight: bold;">INSPEÇÃO REALIZADA {{ rcp.data_inspecao_inicial|date:"d/m H:i" }} <br> LIBERADO P/ PRODUÇÃO</small>                     
+                            {% endif %}</span>
+                            <a href="{% url 'editar_rcp' rcp.rcp %}" class="btn-go">→</a>
+                        </div>
+                        {% endfor %}
+
+                        {% for rcp in liberado_inspecao %}
+
+                    <div class="row-rcp">
+
+                        <span class="rcp-info"><b>{{ rcp.rcp }}</b> - {{ rcp.cliente|truncatechars:15 }} <br>
+
+
+
+                            {% if rcp.data_inspecao_inicial %}
+
+                                <span style="color: #2c7d06; font-weight: bold;">| INSPEÇÃO REALIZADA {{ rcp.data_inspecao_inicial|date:"d/m/Y H:i" }} </span>
+
+
+
+                                {% else %}
+
+                                <span style="color: #d85103">| AGUARDANDO INSPEÇÃO <br>
+                                <span>{% if rcp.previsao_entrega_qualidade %}Prazo da Qualidade: {{ rcp.previsao_entrega_qualidade|date:"d/m/Y H:i" }}{% else %}Prazo: Não informado{% endif %}</span>
+                                </span>
+
+                            {% endif %}
+
+                        </span>
+
+                        <a href="{% url 'editar_rcp' rcp.rcp %}" class="btn-go">→</a>
+
+                    </div>
+
+                    {% endfor %}
+
+
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="fluxo-section">
+            <div class="fluxo-header bg-producao">2. EM PROCESSO (PRODUÇÃO / QUALIDADE)</div>
+            <div class="status-card">
+                <div class="split split-border">
+                    <div class="label-st text-success">⚙️ EM PRODUÇÃO</div>
+                    <div class="num-st text-success">{{ producao_count }}</div>
+                    <div class="mini-scroll">
+                        {% for rcp in em_producao %}
+                        <div class="row-rcp">
+                            <span class="rcp-info"><b>{{ rcp.rcp }}</b> - {{ rcp.cliente|truncatechars:15 }} <br>
+                            <small>{% if rcp.previsao_conclusao_prod %}Previsão da Produção: {{ rcp.previsao_conclusao_prod|date:"d/m H:i" }}{% else %}Previsão Produção: Não informada{% endif %}</small></span>
+                            <a href="{% url 'editar_rcp' rcp.rcp %}" class="btn-go">→</a>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="split">
+                    <div class="label-st text-danger">🔍 FILA PARA INSP. FINAL</div>
+                    <div class="num-st text-danger">{{ inspecao_count }}</div>
+                    <div class="mini-scroll">
+                        {% for rcp in inspecao_final %}
+                        <div class="row-rcp">
+                            <span class="rcp-info"><b>{{ rcp.rcp }}</b> - {{ rcp.cliente|truncatechars:15 }} <br>
+                            {% if rcp.data_inspescao_final %}
+                                <small style="color: #2c7d06; font-weight: bold;">| INSPEÇÃO OK {{ rcp.data_inspescao_final|date:"d/m H:i" }}</small>
+                            {% else %}
+                                <small style="color: #dc2626;">Prazo da Qualidade: {{ rcp.previsao_entrega_qualidade|date:"d/m H:i" }}</small>
+                            {% endif %}</span>
+                            <a href="{% url 'editar_rcp' rcp.rcp %}" class="btn-go">→</a>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="fluxo-section">
+            <div class="fluxo-header bg-expedicao">3. FINALIZADO (RETIRADA / ENTREGA)</div>
+            <div class="status-card">
+                <div class="split split-border">
+                    <div class="label-st text-info">📦 RETIRADA</div>
+                    <div class="num-st text-info">{{ retirada_count }}</div>
+                    <div class="mini-scroll">
+                        {% for rcp in aguardando_retirada %}
+                        <div class="row-rcp">
+                            <span class="rcp-info"><b>{{ rcp.rcp }}</b> - {{ rcp.cliente|truncatechars:15 }} <br>
+                            {% if rcp.nf_saida %}
+                                <small style="color: #16974a; font-weight: bold;">✅NF EMITIDA </small> <br>
+                                <small style="color: #2c7d06; font-weight: bold;">LIBERADO PARA RETIRAR </small>
+                            {% endif %}</span>
+                            <a href="{% url 'editar_rcp' rcp.rcp %}" class="btn-go">→</a>
+                        </div>
+                        {% endfor %}
+                        {% for rcp in aguardando_nota %}
+                        <div class="row-rcp">
+                            <span class="rcp-info"><b>{{ rcp.rcp }}</b> - {{ rcp.cliente|truncatechars:15 }} <br>
+                            <small style="color: #d85103">❌ AGUARDANDO NOTA DE SAÍDA</small>
+                            </span>
+                            <a href="{% url 'editar_rcp' rcp.rcp %}" class="btn-go">→</a>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+                <div class="split">
+                    <div class="label-st text-dark">🤝 ENTREGUES</div>
+                    <div class="num-st text-dark">{{ entregue_ao_cliente_count }}</div>
+                    <div class="mini-scroll">
+                        {% for rcp in entregue_ao_cliente %}
+                        <div class="row-rcp">
+                            <span class="rcp-info"><b>{{ rcp.rcp }}</b> - {{ rcp.cliente|truncatechars:15 }} <br> <span style="color: rgb(0, 179, 255)">ENTREGUE EM: {{ rcp.data_expedicao|date:"d/m H:i" }}</span></span>
+                            <a href="{% url 'editar_rcp' rcp.rcp %}" class="btn-go">→</a>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-box">
+        <div class="table-header-title">📋 LISTA GERAL DE RCPs</div>
+        <div class="table-scroll">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 100px;">RCP</th>
+                        <th>CLIENTE</th>
+                        <th>STATUS</th>
+                        <th>PRIORIDADE</th>
+                        <th style="width: 100px;">AÇÃO</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for rcp in todas_rcps %}
+                    <tr>
+                        <td>
+                            {% with x=rcp.prioridade|upper %}
+                            <span class="pill {% if x == 'URGENTE' %}pri-alta{% elif x == 'MODERADO' %}pri-media{% elif x == 'SEM PRIORIDADE' %}pri-baixa{% endif %}" style="padding: 4px 10px; font-size: 0.5rem;">
+                                {{ rcp.rcp }}
+                                {% if x == 'URGENTE' %}<i class="bi bi-fire"></i> 
+                                {% elif x == 'MODERADO' %}<i class="bi bi-exclamation-triangle"></i> 
+                                {% elif x == 'SEM PRIORIDADE' %}<i class="bi bi-arrow-down-short"></i>
+                                {% else %}<i class="bi bi-clock"></i>{% endif %}
+                            </span>
+                            {% endwith %}
+                        </td>
+                        <td>
+                            <span style="font-weight: 500 !important; font-size: 1px;">
+                            {{ rcp.cliente|truncatechars:35 }}
+                            </span>
+                            {% if rcp.fotos.exists %}
+                                <i class="bi bi-camera-fill" style="color: #0062c4; margin-left: 5px;"></i>
+                                <small style="color: #64748b;">{{ rcp.fotos.count }}</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="pill {% if rcp.status == 'AGUARDANDO LIBERAÇÃO' %}st-yell{% elif rcp.status == 'EM PRODUÇÃO' %}st-green{% elif rcp.status == 'LIBERADO PARA PRODUÇÃO' %}st-green{% elif rcp.status == 'AGUARDANDO INSPEÇÃO FINAL' %}st-red{% elif rcp.status == 'ENTREGUE AO CLIENTE' %}st-blue{% elif rcp.status == 'AGUARDANDO RETIRADA' %}st-yellow{% elif rcp.status == 'AGUARDANDO NOTA DE SAIDA' %}st-nota{% else %}st-purp{% endif %}">
+                                {{ rcp.status }}
+                            </span>
+                        </td>
+                        <td>
+                            {% with p=rcp.prioridade|upper %}
+                            <span class="pill {% if p == 'URGENTE' %}pri-alta{% elif p == 'MODERADO' %}pri-media{% elif p == 'SEM PRIORIDADE' %}pri-baixa{% endif %}">
+                                {% if p == 'URGENTE' %}<i class="bi bi-fire"></i> URGENTE
+                                {% elif p == 'MODERADO' %}<i class="bi bi-exclamation-triangle"></i> MODERADO
+                                {% elif p == 'SEM PRIORIDADE' %}<i class="bi bi-arrow-down-short"></i> BAIXA
+                                {% else %}<i class="bi bi-clock"></i> AGUARDANDO COMERCIAL{% endif %}
+                            </span>
+                            {% endwith %}
+                        </td>
+                        <td>
+                            <a href="{% url 'editar_rcp' rcp.rcp %}" class="btn btn-outline-primary btn-sm rounded-pill px-3">Editar</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

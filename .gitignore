@@ -1,0 +1,16 @@
+# .NET / Visual Studio
+[Bb]in/
+[Oo]bj/
+.vs/
+*.user
+*.suo
+*.ide
+
+# Python / Django
+venv_server/
+__pycache__/
+*.pyc
+*.sqlite3
+media/
+logs/
+.env

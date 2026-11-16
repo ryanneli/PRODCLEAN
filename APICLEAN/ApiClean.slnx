@@ -1,0 +1,14 @@
+<Solution>
+  <Folder Name="/API/">
+    <Project Path="API/ApiClean.API.csproj" />
+  </Folder>
+  <Folder Name="/Application/">
+    <Project Path="Application/ApiClean.Application.csproj" />
+  </Folder>
+  <Folder Name="/Dominio/">
+    <Project Path="Dominio/ApiClean.Dominio.csproj" />
+  </Folder>
+  <Folder Name="/Infra/">
+    <Project Path="Infra/ApiClean.Infra.csproj" />
+  </Folder>
+</Solution>

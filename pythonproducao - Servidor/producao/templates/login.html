@@ -1,0 +1,206 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema Eletroinox</title>
+    <link href="{% static 'vendors/bootstrap/css/bootstrap.min.css' %}" rel="stylesheet">
+    <style>
+    body, html {
+        height: 100%;
+        margin: 0;
+        font-family: 'Inter', 'Segoe UI', Roboto, sans-serif;
+        overflow: hidden;
+        /* Impede a seleção de texto em toda a página */
+        -webkit-user-select: none; /* Safari */
+        -ms-user-select: none;     /* Internet Explorer/Edge */
+        user-select: none;         /* Padrão (Chrome, Firefox, Opera) */
+    }
+
+    input {
+    -webkit-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
+    }
+
+    .login-container {
+        position: relative;
+        height: 100vh;
+        width: 100vw;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        /* Azul profundo com um toque de vinheta nas bordas */
+        background: radial-gradient(circle, #1e296a 0%, #080d2e 100%);
+    }
+
+    /* Logo de fundo mais sutil e artístico */
+    .login-container::before {
+        content: "";
+        position: absolute;
+        width: 110%; 
+        height: 100%;
+        background-image: url("{% static 'media/logoGrupo.png' %}");
+        background-repeat: no-repeat;
+        background-position: center;
+        background-size: 100% auto;
+        opacity: 0.04; /* Quase imperceptível, apenas para dar textura */
+        z-index: 0;
+        filter: grayscale(100%); /* Deixa o logo de fundo neutro */
+    }
+
+    .login-card {
+        position: relative;
+        z-index: 1;
+        width: 90%;
+        max-width: 420px;
+        padding: 3.5rem 2.5rem;
+        text-align: center;
+        
+        /* Glassmorphism Refinado */
+        background: rgba(255, 255, 255, 0.08); 
+        backdrop-filter: blur(25px); /* Desfoque intenso para sofisticação */
+        -webkit-backdrop-filter: blur(25px);
+        
+        border-radius: 28px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        /* Sombra composta para dar profundidade real */
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+
+    .brand-logo-img {
+        width: 90px;
+        filter: drop-shadow(0 4px 8px rgba(0,0,0,0.2));
+        margin-bottom: 1.5rem;
+    }
+
+    .brand-title {
+        font-size: 2.0rem;
+        font-weight: 800;
+        color: #ffffff;
+        text-transform: uppercase;
+        letter-spacing: 2.5px;
+        margin-bottom: 1rem;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+
+    .brand-sub{
+        color: #ffff;
+        font-size: 1.05rem;
+        font-weight: 700;
+        letter-spacing: 1px;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .input-group-custom {
+        margin-bottom: 1.5rem;
+        text-align: left;
+    }
+
+    .input-label {
+        font-size: 0.7rem;
+        font-weight: 700;
+        color: rgba(255, 255, 255, 0.6);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-left: 12px;
+        margin-bottom: 6px;
+        display: block;
+    }
+
+    .form-control {
+        border-radius: 14px;
+        padding: 14px 20px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        background: rgba(255, 255, 255, 0.95); /* Input sólido para legibilidade */
+        color: #1a237e;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+
+    .form-control:focus {
+        background: #ffffff;
+        transform: translateY(-2px);
+        box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.2);
+        border-color: #448aff;
+    }
+
+    .btn-login {
+        background: linear-gradient(135deg, #283593 0%, #1a237e 100%);
+        border: none;
+        border-radius: 14px;
+        padding: 16px;
+        width: 100%;
+        color: white;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        margin-top: 1rem;
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        box-shadow: 0 10px 20px -5px rgba(26, 35, 126, 0.5);
+    }
+
+    .btn-login:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 15px 25px -5px rgba(26, 35, 126, 0.6);
+        background: linear-gradient(135deg, #303f9f 0%, #1a237e 100%);
+    }
+
+    .footer-text {
+        margin-top: 2.5rem;
+        font-size: 0.75rem;
+        color: rgba(255, 255, 255, 0.5);
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        padding-top: 1.5rem;
+    }
+
+    .footer-text strong { color: rgba(255, 255, 255, 0.8); }
+    
+    .contact-link {
+        color: #448aff;
+        text-decoration: none;
+        font-weight: 600;
+    }
+</style>
+</head>
+<body>
+
+    <div class="login-container">
+        <div class="login-card">
+            
+            <div class="brand-title">Controle de Produção</div>
+            <div class="brand-sub">GRUPO ELETROINOX</div>
+
+            {% if form.errors %}
+            <div class="alert alert-danger py-2 small">
+                Usuário ou senha incorreto.
+            </div>
+            {% endif %}
+
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="input-group-custom">
+                    <label class="input-label">Usuário</label>
+                    <input type="text" name="username" class="form-control" placeholder="Digite seu usuário" required>
+                </div>
+
+                <div class="input-group-custom">
+                    <label class="input-label">Senha</label>
+                    <input type="password" name="password" class="form-control" placeholder="••••••••" required>
+                </div>
+
+                <button type="submit" class="btn btn-login">Entrar no Sistema</button>
+            </form>
+
+            <div class="footer-text">
+                <p class="mb-1"><strong>&copy; 2026 Grupo Eletroinox</strong></p>
+                <p class="mb-0">Suporte Interno: Ramal 29 ou 30</p>
+                <a href="mailto:qualidade@eletroinox.com.br" class="contact-link">qualidade@eletroinox.com.br</a>
+            </div>
+
+        </div> </div>
+
+</body>
+</html>

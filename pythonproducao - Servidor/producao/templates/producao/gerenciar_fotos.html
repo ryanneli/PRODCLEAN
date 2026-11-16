@@ -1,0 +1,207 @@
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/glightbox/dist/css/glightbox.min.css">
+<script src="https://cdn.jsdelivr.net/npm/glightbox/dist/js/glightbox.min.js"></script>
+
+<style>
+    /* Ajuste para o corpo do modal ser flexível e permitir scroll interno */
+    .modal-body {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        padding-top: 0;
+    }
+
+    /* Estilo para os botões de controle (Maximizar e Fechar) */
+    .modal-controls .btn {
+        padding: 0.25rem 0.5rem;
+        line-height: 1;
+        opacity: 0.8;
+        transition: opacity 0.2s;
+    }
+
+    .modal-controls .btn:hover { opacity: 1; }
+
+    .modal-title-content {
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        margin-right: 10px;
+    }
+
+    #fotoModal .modal-body {
+        overflow: hidden !important; 
+        display: flex;
+        flex-direction: column;
+    }
+
+    .container-fotos-scroll {
+        flex-grow: 1;
+        overflow-x: hidden;
+    }
+
+    /* Ajuste para o link da galeria ocupar todo o espaço e mudar o cursor */
+    .glightbox {
+        display: block;
+        cursor: zoom-in;
+    }
+</style>
+
+<div class="modal-header bg-dark text-white d-flex align-items-center justify-content-between" 
+     style="margin: -1rem -1rem 1rem -1rem; border-radius: 12px 12px 0 0; border: none; padding: 0.8rem 1.2rem;">
+    
+    <h6 class="modal-title d-flex align-items-center mb-0 modal-title-content">
+        <i class="bi bi-images me-2 text-info"></i> 
+        <span>RCP: <strong>{{ rcp.rcp }}</strong></span>
+        <span class="mx-2" style="opacity: 0.3;">|</span>
+        <span class="fw-light text-truncate" style="font-size: 0.85rem; max-width: 200px;">
+            {{ rcp.cliente|truncatechars:25 }}
+        </span>
+    </h6>
+
+    <div class="modal-controls d-flex align-items-center">
+        <button type="button" class="btn btn-dark btn-sm text-white me-2 border-0" 
+                id="btnMaximizar" onclick="toggleMaximizar()" title="Maximizar/Restaurar">
+            <i class="bi bi-window-fullscreen" id="iconMaximizar" style="font-size: 0.9rem;"></i>
+        </button>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close" style="font-size: 0.8rem;"></button>
+    </div>
+</div>
+
+<div class="mt-2">
+    <div class="alert alert-info py-1 px-2 mb-2" style="font-size: 11px;">
+        <strong>Total de fotos:</strong> {{ fotos.count }}
+    </div>
+
+    <form method="POST" action="{% url 'upload_foto_modal' rcp.rcp %}" enctype="multipart/form-data" class="row g-2 mb-3 pb-3 border-bottom">
+        {% csrf_token %}
+        <div class="col-7">
+            <input type="file" name="imagem" class="form-control form-control-sm shadow-sm" multiple required>
+        </div>
+        <div class="col-3">
+            <select name="tipo" class="form-select form-select-sm shadow-sm">
+                <option value="antes">ANTES</option>
+                <option value="apos">APÓS</option>
+            </select>
+        </div>
+        <div class="col-2">
+            <button type="submit" class="btn btn-primary btn-sm w-100 shadow-sm">
+                <i class="bi bi-cloud-arrow-up-fill"></i>
+            </button>
+        </div>
+    </form>
+
+    <div class="container-fotos-scroll" style="max-height: 65vh; overflow-y: auto; padding-right: 5px;">
+        
+        <div class="mb-4">
+            <h6 class="text-warning fw-bold border-bottom pb-1 mb-3" style="font-size: 0.75rem; letter-spacing: 1px;">
+                <i class="bi bi-clock-history"></i> FOTOS DO ANTES
+            </h6>
+            <div class="row row-cols-3 row-cols-md-4 g-3">
+                {% for foto in fotos %}
+                    {% if foto.tipo|lower == 'antes' %}
+                        <div class="col">
+                            <div class="card h-100 border-0 shadow-sm position-relative overflow-hidden">
+                                <a href="{% url 'excluir_foto_simples' foto.id %}" class="btn btn-danger btn-sm position-absolute top-0 end-0 m-1" style="z-index: 10;" onclick="return confirm('Apagar foto?')">
+                                    <i class="bi bi-trash3"></i>
+                                </a>
+                                <a href="{% url 'servir_foto_rede' foto.id %}" class="glightbox" data-gallery="rcp-gallery">
+                                    <img src="{% url 'servir_foto_rede' foto.id %}" class="card-img-top" style="height: 90px; object-fit: cover; display: block;" onerror="this.src='https://placehold.co/90x90?text=Erro+Rede'">
+                                </a>
+                            </div>
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="mb-2">
+            <h6 class="text-success fw-bold border-bottom pb-1 mb-3" style="font-size: 0.75rem; letter-spacing: 1px;">
+                <i class="bi bi-check-circle-fill"></i> FOTOS DO APÓS
+            </h6>
+            <div class="row row-cols-3 row-cols-md-4 g-3">
+                {% for foto in fotos %}
+                    {% if foto.tipo|lower == 'apos' %}
+                        <div class="col">
+                            <div class="card h-100 border-0 shadow-sm position-relative overflow-hidden" style="border-radius: 8px;">
+                                <a href="{% url 'excluir_foto_simples' foto.id %}" class="btn btn-danger btn-sm position-absolute top-0 end-0 m-1" style="z-index: 10; opacity: 0.9;" onclick="return confirm('Apagar esta foto?')">
+                                     <i class="bi bi-trash3"></i>
+                                </a>
+                                <a href="{% url 'servir_foto_rede' foto.id %}" class="glightbox" data-gallery="rcp-gallery">
+                                    <img src="{% url 'servir_foto_rede' foto.id %}" class="card-img-top" style="height: 120px; width: 100%; object-fit: contain; background: #f8fafc;" onerror="this.src='https://placehold.co/120x120?text=Erro+Rede'">
+                                </a>
+                            </div>
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+
+        {% if not fotos %}
+        <div class="text-center py-5">
+            <i class="bi bi-camera text-muted" style="font-size: 2rem;"></i>
+            <p class="text-muted small mt-2">Nenhuma foto anexada ainda.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    // Função para inicializar/reinicializar a galeria
+    function initGallery() {
+        // Se já existir uma galeria rodando, nós a "limpamos" para não duplicar
+        if (window.myLightbox) {
+            window.myLightbox.destroy();
+        }
+
+        // Criamos a nova instância
+        window.myLightbox = GLightbox({
+            selector: '.glightbox',
+            loop: true,
+            zoomable: true,
+            draggable: true,
+            touchNavigation: true,
+            openEffect: 'zoom',
+            closeEffect: 'zoom'
+        });
+    }
+
+    // Executa agora
+    initGallery();
+
+    // Como o conteúdo vem via AJAX (Modal), damos um pequeno delay para garantir que o DOM está pronto
+    setTimeout(initGallery, 500);
+</script>
+
+
+<script>
+    // Função para inicializar/reinicializar a galeria
+    function initGallery() {
+        console.log("Iniciando GLightbox..."); // Log para vermos no F12 se rodou
+        
+        // Se já existir uma galeria rodando (para evitar duplicidade), nós a destruímos
+        if (window.myLightbox) {
+            window.myLightbox.destroy();
+        }
+
+        // Criamos a nova instância procurando pela classe .glightbox nas fotos
+        window.myLightbox = GLightbox({
+            selector: '.glightbox',
+            loop: true,           // Volta para a primeira após a última
+            zoomable: true,       // Permite zoom
+            touchNavigation: true,// Navegação por toque
+            openEffect: 'zoom',   // Efeito de abertura suave
+            closeEffect: 'zoom'   // Efeito de fechamento suave
+        });
+    }
+
+    // Executa imediatamente ao carregar o conteúdo
+    initGallery();
+
+    // Como o conteúdo vem via HTMX/Modal (AJAX), o DOM pode demorar um pouco.
+    // Damos um pequeno delay de segurança para garantir que as fotos existem na tela.
+    setTimeout(initGallery, 300);
+    
+    // Se você usa HTMX, este evento garante que a galeria ative após cada troca de conteúdo
+    document.body.addEventListener('htmx:afterOnLoad', function(evt) {
+        initGallery();
+    });
+</script>

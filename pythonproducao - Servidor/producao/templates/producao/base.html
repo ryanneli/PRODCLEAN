@@ -1,0 +1,948 @@
+﻿
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Produção</title>
+    
+    <link href="{% static 'vendors/bootstrap/css/bootstrap.min.css' %}" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'vendors/bootstrap-icons/bootstrap-icons.css' %}">
+    <link rel="stylesheet" href="{% static 'css/fonts.css' %}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/glightbox/dist/css/glightbox.min.css">
+    <script src="{% static 'vendors/htmx/htmx.min.js' %}"></script>
+    <script src="{% static 'js/browser-image-compression.js' %}"></script>
+    <!-- <audio id="chat-notification-sound" src="https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3" preload="auto"></audio> -->
+    <audio id="audio-notificacao-sound" preload="auto">
+    <source src="{% static 'vendors/audio/2358-preview.mp3' %}" type="audio/mpeg">
+    </audio>
+    <style>
+        /* 1. ESTRUTURA BASE (TRAVANDO O SCROLL DO NAVEGADOR) */
+        html, body, * { 
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; 
+        }
+
+        html, body { 
+            height: 100%; 
+            margin: 0; 
+            background-color: #f0f2f5; 
+            overflow: hidden; 
+        }
+        
+        body { 
+            display: flex; 
+            flex-direction: column; 
+        }
+
+        /* 2. NAVBAR (FIXA NO TOPO) */
+        .navbar-eia { 
+            background-color: #1a237e !important; 
+            padding: 5px 25px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between; 
+            min-height: 65px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            flex-shrink: 0; 
+        }
+        .brand-text { color: white; font-size: 1.6rem; font-weight: 700; margin-right: 30px; }
+
+        .nav-links a { color: rgba(255,255,255,0.8); text-decoration: none; margin-right: 20px; font-weight: 500; }
+        .nav-links a:hover { color: white; }
+
+        #chat-widget-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        /* Container do Chat (escondido por padrão) */
+        #chat-container-flutuante {
+                width: 440px; /* Aumentado ligeiramente para dar respiro aos nomes dos contatos */
+                height: 530px; 
+                display: none;
+                position: fixed; 
+                bottom: 90px; 
+                right: 20px;
+                z-index: 9999; /* Garante que o chat fique por cima de modais e tabelas */
+                border: none; 
+                border-radius: 16px;
+                box-shadow: 0 10px 40px rgba(0,0,0,0.15); 
+                overflow: hidden;
+            }
+            
+            .chat-header { 
+                background: #075E54; 
+                color: white; 
+                padding: 14px 16px; 
+            }
+            
+            .message-box { 
+                padding: 10px; 
+                margin: 5px; 
+                border-radius: 12px !important; 
+                max-width: 80%; 
+                font-size: 0.9rem; 
+                position: relative;
+                box-shadow: 0 1px 2px rgba(0,0,0,0.08) !important;
+            }
+            
+            /* Mantidos para garantir a cor e estrutura dos balões de chat */
+            .msg-recebida { background: #ffffff; align-self: flex-start; color: #333; }
+            .msg-enviada { background: #dcf8c6; align-self: flex-end; color: #333; }
+            .chat-footer { background: #f0f0f0; padding: 10px; border-top: 1px solid #ddd; }
+
+            /* ==========================================================================
+            2. NOVOS ESTILOS MODERNOS (Barra lateral, Avatares e Scrollbar)
+            ========================================================================== */
+            
+            /* Barras de rolagem discretas e arredondadas (estilo Web) */
+            #chat-container-flutuante ::-webkit-scrollbar {
+                width: 5px;
+            }
+            #chat-container-flutuante ::-webkit-scrollbar-track {
+                background: transparent;
+            }
+            #chat-container-flutuante ::-webkit-scrollbar-thumb {
+                background: #cbd5e1;
+                border-radius: 10px;
+            }
+            #chat-container-flutuante ::-webkit-scrollbar-thumb:hover {
+                background: #94a3b8;
+            }
+
+            /* Linhas da lista de contatos */
+            .chat-contact-item {
+                padding: 10px 12px;
+                margin: 4px 6px;
+                border-radius: 8px;
+                transition: all 0.2s ease;
+                cursor: pointer;
+                border-bottom: none !important;
+            }
+            .chat-contact-item:hover {
+                background-color: #f1f5f9 !important;
+            }
+            .chat-contact-item:active {
+                background-color: #e2e8f0 !important;
+            }
+
+            /* Tratamento do nome do usuário para nunca quebrar a linha */
+            .chat-contact-name {
+                font-size: 0.85rem;
+                font-weight: 500;
+                color: #334155;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                max-width: 95px; /* Evita que o nome empurre o badge de notificação */
+            }
+
+            /* Foto/Avatar com a inicial do funcionário */
+            .chat-avatar-placeholder {
+                width: 32px;
+                height: 32px;
+                border-radius: 50%;
+                background: #6366f1;
+                color: white;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-weight: bold;
+                font-size: 0.85rem;
+                text-transform: uppercase;
+                flex-shrink: 0;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            }
+
+            /* Campo de busca estilizado */
+            .chat-search-input {
+                border-radius: 20px !important;
+                padding-left: 12px;
+                border: 1px solid #e2e8f0;
+                background-color: #f8fafc;
+                transition: all 0.2s;
+            }
+            .chat-search-input:focus {
+                background-color: #fff;
+                border-color: #075E54;
+                box-shadow: 0 0 0 2px rgba(7, 94, 84, 0.15);
+            }
+
+        #unread-badge {
+            position: absolute; top: -5px; right: -5px;
+            background: red; color: white; border-radius: 50%;
+            padding: 2px 6px; font-size: 10px; display: none;
+        }       
+
+
+        .btn-nova-rcp {
+            background-color: rgba(255, 255, 255, 0.1) !important;
+            border: 1px solid rgba(255, 255, 255, 0.4) !important;
+            padding: 8px 15px !important;
+            border-radius: 8px;
+            color: white !important;
+            transition: 0.3s;
+        }
+        .btn-nova-rcp:hover {
+            background-color: #ffc107 !important;
+            color: #1a237e !important;
+            border-color: #ffc107 !important;
+        }
+
+        .main-content { 
+            flex: 1; 
+            overflow-y: auto; 
+            padding: 20px;
+        }
+        
+        /* card de status */
+        .stat-card { border: none; border-radius: 15px; background: white; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .table-modern { border-collapse: separate; border-spacing: 0 10px; width: 100%; }
+        .table-modern tr { background: white; transition: 0.2s; cursor: pointer; }
+        .table-modern tr:hover td { background-color: #f1f3f9 !important; }
+        .table-modern td { padding: 16px; border: none !important; vertical-align: middle; }
+        .table-modern tr td:first-child { border-radius: 12px 0 0 12px; font-weight: bold; }
+        .table-modern tr td:last-child { border-radius: 0 12px 12px 0; text-align: right; }
+
+        .badge-status { padding: 7px 15px; border-radius: 30px; font-weight: 600; font-size: 0.75rem; }
+        .bg-aguardando { background-color: #f3e5f5; color: #7b1fa2; }
+        .bg-producao { background-color: #e8f5e9; color: #2e7d32; }
+        .bg-retirada { background-color: #e3f2fd; color: #1976d2; }
+        .bg-editar-rcp { background-color: #1a237e !important; }
+        .bg-purple { background-color: #6f42c1 !important; color: white !important; }
+
+        .sticky-top {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background-color: white !important;
+            box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .navbar-eia .btn-nova-rcp {
+            font-size: 0.75rem !important;
+            border-radius: 5px !important;
+            white-space: nowrap !important;
+            padding: 6px 10px !important;
+        }
+
+        .navbar-eia .brand-text {
+            display: block !important;
+            font-size: 20px !important;
+            font-weight: 1200 !important;
+            color: white;
+            text-align: center;
+            line-height: 1.0 !important;
+        }
+
+        .navbar-eia .menu_bt {
+            font-size: 18px !important;
+            font-weight: 800 !important;
+            color: white;
+            line-height: 1.0 !important;
+            margin-left: -30px !important;
+        }
+
+        .user-container-column {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            margin-right: 20px !important;
+            line-height: 1.1;
+        }
+
+        .user-name-label {
+            font-size: 0.9rem;
+            white-space: nowrap;
+            color: white;
+            padding-bottom: 5px;
+            margin-left: -5px !important;
+        }
+
+        .logout-btn-link {
+            background: none;
+            border: none;
+            padding: 0px 10px;
+            color: #ff8a80; 
+            font-size: 0.65rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            cursor: pointer;
+            margin-left: -15px !important;
+        }
+
+        .logout-btn-link:hover {
+            color: #ff5252;
+            text-decoration: underline;
+        }
+
+        .footer-sistema {
+            background-color: #1a202c;
+            color: #a0aec0;
+            text-align: center;
+            width: 100%;
+            padding: 4px 0 !important;
+            border-top: 1px solid #2d3748;
+            position: relative;
+            z-index: 10;
+        }
+
+        .footer-info {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .footer-info p, .footer-info span {
+            margin: 0 !important;
+            font-size: 8.8px !important;
+            line-height: 1.2;
+        }
+
+        .badge-v {
+            border: 1px solid #546f9c;
+            border-radius: 4px;
+            padding: 1px 4px;
+            font-size: 12px !important;
+            margin-left: 27px !important;
+        }
+
+        #sidebar {
+            min-width: 50px;
+            max-width: 50px;
+            transition: all 0.3s;
+            background: #212529;
+        }
+
+        #sidebar .nav-link{
+            color: #adb5bd;
+            padding: 12px 20px;
+            display: block;
+            transition: 0.2s;
+        }
+
+        .offcanvas-start {
+            width: 250px !important;
+        }
+
+        @media (max-width: 768px) {
+    .dashboard-wrapper {
+        height: auto; 
+        overflow: visible; 
+        padding: 10px;
+        margin-top: 0;
+    }
+
+    .cards-row {
+        flex-direction: column; 
+        height: auto;
+        flex: none; 
+        gap: 15px; 
+    }
+
+    /* Faz as colunas internas (splits) empilharem em vez de ficarem lado a lado */
+    .status-card {
+        flex-direction: column;
+        height: auto; /* Deixa o card crescer conforme o conteúdo */
+        min-height: 300px;
+    }
+
+    .split {
+        border-right: none !important; /* Remove a linha vertical */
+        border-bottom: 2px solid #f1f5f9; /* Adiciona uma linha horizontal de separação */
+        padding: 15px;
+    }
+
+    .split:last-child {
+        border-bottom: none;
+    }
+
+    /* Ajusta os números para não estourarem o card */
+    .num-st {
+        font-size: 1.5rem !important;
+        gap: 20px !important; /* Ajusta o gap que você colocou no HTML */
+    }
+
+    /* Tabela Responsiva */
+    .table-box {
+        margin-top: 20px;
+        min-height: 400px;
+    }
+
+    /* Esconde colunas menos importantes na tabela para caber o RCP e Status */
+    th:nth-child(2), td:nth-child(2), /* Cliente */
+    th:nth-child(4), td:nth-child(4)  /* Prioridade Texto */ {
+        display: none;
+    }
+    
+    table td, table th {
+        padding: 8px;
+        font-size: 0.8rem;
+    }
+
+    .pill {
+        font-size: 0.7rem !important;
+        padding: 4px 8px;
+      }
+    }
+    .btn-pecas-matadas {
+            background-color: #fd7e14 !important; /* Laranja chamativo */
+            border: 1px solid #fd7e14 !important;
+            color: white !important;
+            font-weight: 600 !important;
+            padding: 6px 12px !important;
+            border-radius: 5px !important;
+            transition: 0.3s;
+            text-decoration: none !important;
+            font-size: 0.75rem !important;
+        }
+    .btn-pecas-matadas:hover {
+            background-color: #e66a00 !important;
+            border-color: #e66a00 !important;
+            color: white !important;
+        }
+    </style>
+</head>
+<body>
+
+<div class="offcanvas offcanvas-start bg-dark text-white" tabindex="-1" id="menuLateral" aria-labelledby="menuLateralLabel" style="--bs-bg-opacity: .95;">
+    <div class="offcanvas-header border-bottom border-secondary">
+        <h5 class="offcanvas-title" id="menuLateralLabel">CONTROLE DE PRODUÇÃO</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body">
+        <ul class="nav flex-column">
+            <li class="nav-item mb-2">
+                <a href="{% url 'nova_rcp' %}" class="nav-link text-white hover-gray">
+                    <i class="bi bi-plus-circle me-2"></i> Nova RCP
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link text-white d-flex justify-content-between align-items-center" data-bs-toggle="collapse" href="#adminSubmenu">
+                    <span><i class="bi bi-gear me-2"></i> Gerenciamento</span>
+                    <i class="bi bi-chevron-down small"></i>
+                </a>
+                <div class="collapse ps-3" id="adminSubmenu">
+                    <ul class="nav flex-column">
+                        {% if user.is_superuser %}
+                        <li class="nav-item">
+                            <a href="/admin/" class="nav-link text-secondary" target="_blank">Painel Adm</a>
+                        </li>
+                        {% endif %}
+                        <li class="nav-item">
+                            <a href="{% url 'lista_logs' %}" class="nav-link text-secondary">Log de Alterações</a>
+                        </li>
+                    </ul>
+                </div>
+            </li>
+            <hr class="border-secondary">
+            <li class="nav-item">
+                <form id="logout-form" action="{% url 'logout' %}" method="POST" style="display: none;">
+                    {% csrf_token %}
+                </form>
+                <a href="#" class="nav-link text-danger" onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+                    <i class="bi bi-box-arrow-right me-2"></i> Sair da Conta
+                </a>
+            </li>
+        </ul>
+    </div>
+</div>
+
+<nav class="navbar-eia">
+    <div class="d-flex align-items-center justify-content-between w-100">
+        <div class="d-flex align-items-center">
+            <button class="btn btn-light m-2" type="button" data-bs-toggle="offcanvas" data-bs-target="#menuLateral" aria-controls="menuLateral" style="padding: 5px;">
+                <i class="bi bi-three-dots-vertical"></i>
+           </button> 
+            <span class="brand-text" style="margin-left: 10px;">
+                CONTROLE <br> DE PRODUÇÃO
+            
+            </span>
+         <div class="nav-links d-flex align-items-center ms-3">
+    <a href="{% url 'dashboard' %}" class="menu_bt">🏠 Menu</a>
+    
+    {% if "Qualidade" in user.groups.all.values_list|join:"," or user.is_superuser %}
+        <a href="{% url 'nova_rcp' %}" class="btn btn-success d-none d-md-inline-block me-2" style="background-color: transparent; border-color: white; font-size: 0.75rem; border-radius: 5px; padding: 6px 10px;">➕ Nova RCP</a>
+    {% endif %}
+
+    <a href="{% url 'dashboard_perdas' %}" class="btn-pecas-matadas d-none d-md-inline-block me-2">
+        <i class="bi bi-trash3-fill"></i> Peças Matadas
+    </a>
+</div>
+        </div>
+
+        <div class="d-flex align-items-center">
+            {% if user.is_authenticated %}
+            <div class="user-container-column me-4"> 
+                <span class="text-white user-name-label">Olá, <strong>{{ user.username }}</strong></span>
+                <form action="{% url 'logout' %}" method="post" class="m-0 p-0">
+                    {% csrf_token %}
+                    <button type="submit" class="logout-btn-link">SAIR DA CONTA</button>
+                </form>
+            </div>
+            {% endif %} 
+
+            <li class="nav-item dropdown" id="notificacoes-area" style="list-style: none;">
+                <a class="nav-link position-relative" href="#" id="notifDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false" style="margin-right: 20px; margin-left: -15px;">
+                    <i class="bi bi-bell-fill" style="font-size: 1.5rem; color: white;"></i>
+                    <div id="notif-badge-container" style="display: inline;">
+                        {% if alertas.count > 0 %}
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">{{ alertas.count }}</span>
+                        {% endif %}
+                    </div>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end shadow-lg" aria-labelledby="notifDropdown" style="width: 320px; max-height: 400px; overflow-y: auto;" id="notif-lista-container"
+                    hx-get="{% url 'carregar_notificacoes' %}" hx-trigger="every 2s" hx-swap="innerHTML">
+                    {% include 'producao/notificacoes_list.html' %}
+                </ul>
+            </li>
+            
+            <div class="search-box-nav d-none d-md-block">
+                <form action="{% url 'dashboard' %}" method="GET" class="input-group input-group-sm">
+                    <input type="text" name="busca" class="form-control" placeholder="Busca..." value="{{ request.GET.busca }}">
+                    <button class="btn btn-warning fw-bold" type="submit">🔍</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</nav>
+
+
+<!-- Início do Chat Flutuante -->
+<button id="chat-widget-button" onclick="toggleChat()" style="position: fixed; bottom: 20px; right: 20px; width: 60px; height: 60px; border-radius: 50%; background: linear-gradient(135deg, #25d366, #128c7e); color: white; border: none; z-index: 9999; box-shadow: 0 4px 12px rgba(37, 211, 102, 0.4); transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+    <i class="bi bi-chat-dots-fill" style="font-size: 1.5rem;"></i>
+    
+    {% if total_nao_lidas_global > 0 %}
+        <span id="unread-count-badge" style="position: absolute; top: -2px; right: -2px; background: #ef4444; color: white; border-radius: 50%; padding: 3px 8px; font-size: 11px; font-weight: bold; border: 2px solid #fff; display: block;">
+            {{ total_nao_lidas_global }}
+        </span>
+    {% else %}
+        <span id="unread-count-badge" style="position: absolute; top: -2px; right: -2px; background: #ef4444; color: white; border-radius: 50%; padding: 3px 8px; font-size: 11px; font-weight: bold; border: 2px solid #fff; display: none;">
+            0
+        </span>
+    {% endif %}
+</button>
+
+<div id="chat-container-flutuante" class="card shadow-lg" style="display: none; position: fixed; bottom: 90px; right: 20px; width: 440px; height: 530px; z-index: 9999; border-radius: 16px; overflow: hidden; border: 1px solid rgba(0,0,0,0.05); flex-direction: column;">
+    
+    <div class="chat-header d-flex justify-content-between align-items-center" style="background: #014ced; color: white; padding: 14px 16px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <div>
+            <h6 class="mb-0" style="font-weight: 600; letter-spacing: 0.5px;">Chat Eletroinox</h6>
+            <small id="status-contato" style="font-size: 0.75rem; opacity: 0.85;">Selecione uma conversa para iniciar</small>
+        </div>
+        <button type="button" class="btn-close btn-close-white" style="font-size: 0.8rem; opacity: 0.8;" onclick="toggleChat()"></button>
+    </div>
+
+    <div class="d-flex" style="flex: 1; min-height: 0; background-color: #fff;">
+        
+        <div class="bg-white border-end d-flex flex-column" style="width: 175px; flex-shrink: 0;">
+            
+            <div class="p-2 bg-white">
+                <input type="text" id="buscar-contato-input" class="form-control form-control-sm chat-search-input" placeholder="Buscar funcionário...">
+            </div>
+            
+            <div id="lista-contatos-container" style="overflow-y: auto; flex: 1; padding-bottom: 8px;">
+                {% for contato in todos_usuarios %}
+                    <div class="chat-contact-item d-flex align-items-center justify-content-between bg-white contact-item" data-username="{{ contato.username }}" onclick="abrirConversa('{{ contato.id }}', '{{ contato.username }}')">
+                        <div class="d-flex align-items-center gap-2" style="min-width: 0;">
+                            <div class="chat-avatar-placeholder">
+                                {{ contato.username|slice:":1" }}
+                            </div>
+                            <span class="chat-contact-name">{{ contato.username }}</span>
+                        </div>
+                        
+                        <span id="badge-user-{{ contato.username|lower }}" class="contact-unread-badge badge bg-danger rounded-pill" style="font-size: 0.7rem; padding: 4px 6px;">
+                            {{ contato.mensagens_nao_lidas }}
+                        </span>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="d-flex flex-column" style="flex: 1; background: #efeae2; min-width: 0; position: relative;">
+            
+            <div id="chat-log" class="p-3 d-flex flex-column" style="flex: 1; overflow-y: auto; gap: 4px;">
+                <div class="text-center text-muted small my-auto px-3">
+                    <i class="bi bi-chat-left-text d-block mb-2" style="font-size: 2rem; opacity: 0.3;"></i>
+                    Escolha um contato na lista lateral para visualizar o histórico.
+                </div>
+            </div>
+            
+            <div class="p-2 bg-light border-top">
+                <div class="input-group">
+                    <input type="text" id="chat-message-input" class="form-control form-control-sm shadow-none" placeholder="Digite sua mensagem..." style="border-radius: 20px 0 0 20px; border: 1px solid #cbd5e1; padding-left: 12px;">
+                    <button id="chat-message-submit" class="btn btn-success btn-sm" style="border-radius: 0 20px 20px 0; padding-left: 14px; padding-right: 14px; background-color: #128c7e; border-color: #128c7e;">
+                        <i class="bi bi-send-fill"></i>
+                    </button>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+</div>
+<!-- fim do chat -->
+
+<main class="main-content">
+    <div class="container-fluid">
+        {% block content %}{% endblock %}
+    </div>
+</main>
+
+<div id="banner-manutencao" style="display: none; background-color: #dc3545; color: white; padding: 15px; text-align: center; font-weight: bold; position: fixed; top: 0; width: 100%; z-index: 9999;">
+    <span id="texto-aviso"></span>
+</div>
+
+
+<footer class="footer-sistema">
+    <div class="container-fluid">
+        <span class="badge-v">Sistema Controle Produção    <span>2.0 © | Dúvidas/Suporte: <strong>ligar para ramal 29/30</strong></span> </span> 
+    </div>
+</footer>
+
+
+
+
+{{ meus_grupo_ids|json_script:"dados-grupos-inicial" }}
+<script>
+
+// Conecte ao seu WebSocket (o mesmo que você usa no chat)
+// 1. Variáveis de controle e Áudio
+// --- ADICIONE ESTA LINHA ---
+const socketAviso = new WebSocket('ws://' + window.location.host + '/ws/avisos/');
+
+// --- AJUSTE O ONMESSAGE PARA O SOCKET DE AVISO ---
+socketAviso.onmessage = function(e) {
+    const data = JSON.parse(e.data);
+    if (data.tipo === 'manutencao') {
+        const banner = document.getElementById('banner-manutencao');
+        const texto = document.getElementById('texto-aviso');
+        texto.innerText = data.mensagem;
+        banner.style.display = 'block'; 
+    }
+};
+
+
+// 1. Variáveis de controle e Áudio
+const notificacaoSom = document.getElementById('audio-notificacao-sound');
+let socketsConectados = {}; 
+let grupoChatAtivoId = null; 
+const userLogado = "{{ request.user.username }}";
+let msgIdSendoEditada = null;
+
+// Resgata os grupos injetados pelo Django de forma segura
+const campoDadosIniciais = document.getElementById('dados-grupos-inicial');
+const meusGruposInicial = campoDadosIniciais ? (JSON.parse(campoDadosIniciais.textContent) || []) : [];
+
+// Destrava o som no primeiro clique do usuário na página
+document.addEventListener('click', function() {
+    notificacaoSom.play().then(() => {
+        notificacaoSom.pause();
+        notificacaoSom.currentTime = 0;
+    }).catch(() => {});
+}, { once: true });
+
+// Conecta automaticamente em todos os grupos ao carregar a página e faz a ordenação inicial
+document.addEventListener('DOMContentLoaded', function() {
+    meusGruposInicial.forEach(id => {
+        conectarWebSocket(id);
+    });
+    
+    // CORREÇÃO: Executa o recálculo e a exibição imediata dos dados vindos do banco via Django
+    recalcularTotalNaoLidas();
+});
+
+function recalcularTotalNaoLidas() {
+    const globalBadge = document.getElementById('unread-count-badge');
+    let totalGeral = 0;
+    
+    // CORREÇÃO: Avalia o conteúdo de texto puro inserido pelo Django antes de checar visibilidade
+    document.querySelectorAll('.contact-unread-badge, [id^="badge-user-"]').forEach(badge => {
+        const valor = parseInt(badge.innerText) || 0;
+        
+        if (valor > 0) {
+            // Se o Django renderizou um número maior que zero, força o elemento a ficar visível
+            badge.style.display = 'block';
+            badge.classList.remove('d-none');
+            totalGeral += valor;
+        } else {
+            // Garante que fique oculto se for zero
+            badge.style.display = 'none';
+            badge.classList.add('d-none');
+        }
+    });
+    
+    if (globalBadge) {
+        globalBadge.innerText = totalGeral;
+        globalBadge.style.display = totalGeral > 0 ? 'block' : 'none';
+    }
+
+    // Ordena os contatos na tela com base nos novos estados dos badges
+    ordenarContatosPorMensagens();
+}
+
+function ordenarContatosPorMensagens() {
+    const container = document.getElementById('lista-contatos-container');
+    if (!container) return;
+
+    // Transforma a lista de elementos HTML em uma Array para podermos ordenar
+    const contatos = Array.from(container.querySelectorAll('.contact-item'));
+
+    contatos.sort((a, b) => {
+        const badgeA = a.querySelector('.contact-unread-badge') || a.querySelector('[id^="badge-user-"]');
+        const badgeB = b.querySelector('.contact-unread-badge') || b.querySelector('[id^="badge-user-"]');
+
+        // CORREÇÃO CRÍTICA: Baseia a ordenação estritamente no valor numérico interno do elemento, 
+        // evitando problemas com a propriedade display pendente de atualização no carregamento da página
+        const totalA = badgeA ? (parseInt(badgeA.innerText) || 0) : 0;
+        const totalB = badgeB ? (parseInt(badgeB.innerText) || 0) : 0;
+
+        // Critério 1: Quem tem mais mensagens não lidas fica em cima (Decrescente)
+        if (totalB !== totalA) {
+            return totalB - totalA;
+        }
+
+        // Critério 2: Se empatar em zero, mantém a ordem alfabética original pelo username (case-insensitive)
+        const nomeA = (a.getAttribute('data-username') || '').toLowerCase();
+        const nomeB = (b.getAttribute('data-username') || '').toLowerCase();
+        return nomeA.localeCompare(nomeB);
+    });
+
+    // Reatacha os elementos ordenados de volta ao container sem recarregar a página
+    contatos.forEach(item => container.appendChild(item));
+}
+
+function limparBadgeContato(username) {
+   const contactBadge = document.getElementById(`badge-user-${username.toLowerCase()}`);
+    if (contactBadge) {
+        contactBadge.innerText = '0';
+        contactBadge.style.display = 'none';
+        contactBadge.classList.add('d-none'); 
+    }
+    recalcularTotalNaoLidas();
+}
+
+// 2. Função para abrir a conversa
+function abrirConversa(userId, username) {
+    limparBadgeContato(username);
+
+    document.getElementById('status-contato').innerText = "Conversando com " + username;
+    const chatLog = document.querySelector('#chat-log');
+    chatLog.innerHTML = '<div class="text-center text-muted small">Carregando mensagens...</div>';
+
+    fetch(`/chat/obter-id-privado/${userId}/`)
+        .then(response => {
+            if (!response.ok) throw new Error('Erro ao obter ID do grupo');
+            return response.json();
+        })
+        .then(data => {
+            const grupoId = data.id;
+            grupoChatAtivoId = grupoId;
+
+            return fetch(`/chat/historico/${grupoId}/`)
+                .then(res => {
+                    if (!res.ok) throw new Error('Erro ao buscar histórico');
+                    return res.json();
+                })
+                .then(histData => {
+                    chatLog.innerHTML = '';
+                    
+                    if (histData.historico) {
+                        histData.historico.forEach(msg => {
+                            renderizarMensagem(
+                                msg.usuario, 
+                                msg.mensagem, 
+                                msg.usuario === userLogado, 
+                                msg.data || '--:--', 
+                                msg.id || 0, 
+                                msg.lida || false
+                            );
+                        });
+                    }
+                    
+                    if (!socketsConectados[grupoId]) {
+                        conectarWebSocket(grupoId);
+                    }
+
+                    setTimeout(() => {
+                        const socket = socketsConectados[grupoId];
+                        if (socket && socket.readyState === WebSocket.OPEN) {
+                            socket.send(JSON.stringify({ 'tipo': 'leitura' }));
+                        }
+                    }, 400);
+                });
+        })
+        .catch(err => {
+            console.error("Erro detalhado:", err);
+            chatLog.innerHTML = `<div class="text-danger small text-center">Erro: ${err.message}</div>`;
+        });
+}
+
+// 3. Função de Renderização
+function renderizarMensagem(usuario, mensagem, isMe, hora, msgId, lida) {
+    const chatLog = document.querySelector('#chat-log');
+    const msgEscapada = mensagem.replace(/'/g, "\\'");
+    const btnEditar = (isMe && msgId !== 0) ? `<i class="bi bi-pencil-square ms-2 cursor-pointer" onclick="iniciarEdicao(${msgId}, '${msgEscapada}')" style="font-size: 0.7rem; cursor:pointer;"></i>` : '';
+    
+    const checkIcon = lida ? '<i class="bi bi-check2-all text-primary"></i>' : '<i class="bi bi-check2"></i>';
+    
+    const msgHtml = `
+        <div class="message-box ${isMe ? 'msg-enviada' : 'msg-recebida'}" id="msg-${msgId}" style="margin-bottom: 10px; padding: 8px; border-radius: 10px; max-width: 80%; ${isMe ? 'align-self: flex-end; background: #dcf8c6;' : 'align-self: flex-start; background: #fff;'}">
+            <div class="d-flex justify-content-between align-items-start">
+                <small class="text-muted" style="font-size: 0.65rem;">${usuario}</small>
+                ${btnEditar}
+            </div>
+            <div class="msg-texto">${mensagem}</div>
+            <div class="text-end" style="font-size: 0.65rem; opacity: 0.7;">
+                ${hora} ${isMe ? checkIcon : ''}
+            </div>
+        </div>
+    `;
+    chatLog.insertAdjacentHTML('beforeend', msgHtml);
+    chatLog.scrollTop = chatLog.scrollHeight;
+}
+
+// 4. Conexão WebSocket Multi-channel
+function conectarWebSocket(id) {
+    if (socketsConectados[id]) { return; } 
+
+    const wsScheme = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+    const socket = new WebSocket(wsScheme + window.location.host + '/ws/chat/' + id + '/');
+    socket.grupoId = id; 
+
+    socket.onmessage = function(e) {
+        const data = JSON.parse(e.data);
+        const grupoDoSocket = this.grupoId;
+        
+        if (data.type === 'chat_read_receipt') {
+            if (data.usuario_que_leu !== userLogado && grupoDoSocket === grupoChatAtivoId) {
+                document.querySelectorAll('.bi-check2').forEach(el => {
+                    el.classList.replace('bi-check2', 'bi-check2-all');
+                    el.classList.add('text-primary');
+                });
+            }
+            return;
+        }
+
+        if (data.type === 'chat_message_edit') {
+            if (grupoDoSocket === grupoChatAtivoId) {
+                const msgDiv = document.querySelector(`#msg-${data.msg_id} .msg-texto`);
+                if (msgDiv) msgDiv.innerHTML = data.mensagem + ' <small style="font-size:0.6rem;">(editada)</small>';
+            }
+            return;
+        }
+
+        if (data.usuario !== userLogado) {
+            notificacaoSom.play().catch(() => {});
+            
+            const chatJanelaAberta = document.getElementById('chat-container-flutuante').style.display === 'flex';
+            
+            if (grupoDoSocket === grupoChatAtivoId && chatJanelaAberta) {
+                this.send(JSON.stringify({ 'tipo': 'leitura' }));
+            } else {
+                atualizarContadorNaoLidas(data.usuario);
+            }
+        }
+
+        if (grupoDoSocket === grupoChatAtivoId) {
+            renderizarMensagem(data.usuario, data.mensagem, data.usuario === userLogado, data.hora, data.msg_id, false);
+        }
+    };
+
+    socket.onclose = function() {
+        delete socketsConectados[id]; 
+    };
+
+    socketsConectados[id] = socket;
+}
+
+// 5. Edição e Envio baseado no canal ativo
+function iniciarEdicao(id, textoAntigo) {
+    msgIdSendoEditada = id;
+    const input = document.getElementById('chat-message-input');
+    input.value = textoAntigo;
+    input.focus();
+    input.style.backgroundColor = "#fff3cd";
+}
+
+document.getElementById('chat-message-submit').onclick = function() {
+    const input = document.getElementById('chat-message-input');
+    const mensagem = input.value;
+
+    if (mensagem.trim() !== "" && grupoChatAtivoId && socketsConectados[grupoChatAtivoId]) {
+        const payload = msgIdSendoEditada ? 
+            { 'tipo': 'edicao', 'msg_id': msgIdSendoEditada, 'mensagem': mensagem } : 
+            { 'tipo': 'mensagem', 'mensagem': mensagem };
+
+        socketsConectados[grupoChatAtivoId].send(JSON.stringify(payload));
+        input.value = '';
+        input.style.backgroundColor = "";
+        msgIdSendoEditada = null;
+    }
+};
+
+// 6. Interface
+function atualizarContadorNaoLidas(remetenteUsername) {
+    const contactBadge = document.getElementById(`badge-user-${remetenteUsername.toLowerCase()}`);
+    if (contactBadge) {
+        let atual = parseInt(contactBadge.innerText) || 0;
+        contactBadge.innerText = atual + 1;
+        contactBadge.style.display = 'block';
+        contactBadge.classList.remove('d-none'); 
+    }
+    
+    recalcularTotalNaoLidas();
+}
+
+function toggleChat() {
+    const chat = document.getElementById('chat-container-flutuante');
+    
+    if (chat.style.display === 'none' || chat.style.display === '') {
+        chat.style.display = 'flex';
+        
+        if (grupoChatAtivoId && socketsConectados[grupoChatAtivoId]) {
+            socketsConectados[grupoChatAtivoId].send(JSON.stringify({ 'tipo': 'leitura' }));
+            const contatoNomeAtivo = document.getElementById('status-contato').innerText.replace("Conversando com ", "");
+            limparBadgeContato(contatoNomeAtivo);
+        }
+    } else {
+        chat.style.display = 'none';
+    }
+}
+
+document.querySelector('#chat-message-input').onkeyup = function(e) {
+    if (e.keyCode === 13) document.querySelector('#chat-message-submit').click();
+};
+
+document.getElementById('buscar-contato-input').addEventListener('keyup', function() {
+    const termoBusca = this.value.toLowerCase().trim();
+    
+    document.querySelectorAll('.contact-item').forEach(item => {
+        const usernameContato = (item.getAttribute('data-username') || '').toLowerCase();
+        
+        if (usernameContato.includes(termoBusca)) {
+            item.classList.remove('d-none');
+            item.classList.add('d-flex');
+        } else {
+            item.classList.remove('d-flex');
+            item.classList.add('d-none');
+        }
+    });
+});
+
+</script>
+
+
+
+<script src="{% static 'vendors/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+<script src="https://cdn.jsdelivr.net/npm/glightbox/dist/js/glightbox.min.js"></script>
+</body>
+</html>

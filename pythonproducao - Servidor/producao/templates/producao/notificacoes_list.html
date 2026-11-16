@@ -1,0 +1,72 @@
+{% for alerta in alertas %}
+<li class="p-2 border-bottom notification-item">
+    <div class="px-2 py-1">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+            <strong class="text-primary" style="font-size: 0.85rem;">RCP {{ alerta.rcp_numero }}</strong>
+            <small class="text-muted" style="font-size: 0.7rem;">{{ alerta.data_criacao|date:"H:i" }}</small>
+        </div>
+        
+        <p class="mb-2 text-dark" style="font-size: 0.9rem; white-space: normal; word-wrap: break-word;">
+            {{ alerta.mensagem }}
+        </p>
+        
+        <div class="d-flex gap-3">
+            <a href="{% url 'editar_rcp' alerta.rcp_numero %}" target="_blank" class="btn btn-sm btn-link p-0 text-decoration-none">Ver</a>
+            
+            <button hx-post="{% url 'marcar_lida' alerta.id %}" 
+                    hx-target="closest li" 
+                    hx-swap="delete"
+                    hx-on::after-settle="verificarVazio()"
+                    onclick="event.stopPropagation();"
+                    class="btn btn-sm btn-link p-0 text-decoration-none text-danger">
+                Lida
+            </button>
+        </div>
+    </div>
+</li>
+{% empty %}
+<li class="dropdown-item text-center text-muted py-3 notification-empty">
+    <i class="bi bi-check2-all"></i> Nenhuma notificação no momento
+</li>
+{% endfor %}
+
+<div id="notif-badge-container" hx-swap-oob="true">
+    {% if alertas.all|length > 0 %}
+        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="margin-top: 5px; margin-left: -5px;">
+            {{ alertas.all|length }}
+        </span>
+    {% endif %}
+</div>
+
+<script>
+    function verificarVazio() {
+        const lista = document.getElementById('notif-lista-container');
+        if (!lista) return;
+
+        const itens = lista.querySelectorAll('li.notification-item');
+        
+        if (itens.length === 0) {
+            const dropdownBtn = document.getElementById('notifDropdown');
+            const dropdown = bootstrap.Dropdown.getInstance(dropdownBtn);
+            
+            if (dropdown) {
+                dropdown.hide();
+            }
+
+            // Limpeza forçada para evitar o filete branco (menu vazio mas aberto)
+            dropdownBtn.classList.remove('show');
+            dropdownBtn.setAttribute('aria-expanded', 'false');
+            lista.classList.remove('show');
+            lista.style.display = 'none';
+            
+            setTimeout(() => {
+                lista.style.display = '';
+                // Insere mensagem de vazio para não ficar um dropdown fantasma
+                lista.innerHTML = '<li class="dropdown-item text-center text-muted py-3">Nenhuma notificação nova</li>';
+            }, 300);
+        }
+    }
+
+    // Executa a verificação sempre que este fragmento for carregado
+    verificarVazio();
+</script>

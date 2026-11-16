@@ -1,0 +1,29 @@
+<div class="modal-header bg-light">
+    <h5 class="modal-title">Fotos da Perda - Registro #{{ registro.id }}</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+</div>
+
+<div class="modal-body" id="corpo-modal-fotos">
+    <div class="row">
+        {% for foto in fotos %}
+        <div class="col-md-3 mb-3">
+            <a href="{% url 'servir_foto_peca_matada' foto.id %}" class="glightbox" data-gallery="galeria-perdas" data-type="image">
+                <img src="{% url 'servir_foto_peca_matada' foto.id %}" 
+                     class="img-thumbnail" 
+                     style="width: 100%; height: 150px; object-fit: cover;" 
+                     alt="Foto">
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+
+    <hr>
+
+    <form id="form-upload-foto" method="POST" enctype="multipart/form-data" action="{% url 'fotos_peca_matada_modal' registro.id %}">
+        {% csrf_token %}
+        <div class="input-group">
+            <input type="file" name="foto_upload" class="form-control" required accept="image/*">
+            <button type="submit" class="btn btn-primary" id="btn-salvar">Salvar</button>
+        </div>
+    </form>
+</div>

@@ -1,0 +1,286 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auditoria de Produção - RCP</title>
+    <link href="{% static 'vendors/bootstrap/css/bootstrap.min.css' %}" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'vendors/bootstrap-icons/bootstrap-icons.css' %}">
+    <style>
+        body { background-color: #121212; color: #e0e0e0; padding: 20px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .card { background-color: #1e1e1e; border: 1px solid #333; border-radius: 12px; box-shadow: 0 8px 16px rgba(0,0,0,0.4); }
+        .table { color: #e0e0e0; vertical-align: middle; }
+        .table-hover tbody tr:hover { background-color: #252525; color: #fff; }
+        
+        /* Filtros */
+        .filter-section { background-color: #252525; border-radius: 8px; padding: 15px; margin-bottom: 20px; border: 1px solid #444; }
+        .form-control-dark { background-color: #121212; border: 1px solid #444; color: white; }
+        .form-control-dark:focus { background-color: #1a1a1a; border-color: #44abff; color: white; box-shadow: none; }
+
+        .badge-create { background-color: #28a745; color: white; padding: 6px 10px; } 
+        .badge-edit { background-color: #ffc107; color: #000; padding: 6px 10px; } 
+        .badge-delete { background-color: #dc3545; color: white; padding: 6px 10px; } 
+
+        h2 { color: #44abff; font-weight: bold; letter-spacing: -1px; }
+        .text-info-custom { font-size: 0.92em; line-height: 1.4; }
+        .change-box { background: #252525; border-radius: 6px; padding: 8px 12px; border-left: 3px solid #44abff; }
+        .user-tag { color: #44abff; font-weight: 600; text-transform: uppercase; font-size: 0.85em; }
+
+        /* Estilização Customizada das Abas (Tabs) para o Tema Escuro */
+        .nav-tabs { border-bottom: 1px solid #333; }
+        .nav-link { color: #aaa; border: none !important; transition: all 0.2s ease; }
+        .nav-link:hover { color: #fff; background-color: #1a1a1a; border-radius: 8px 8px 0 0; }
+        .nav-link.active { background-color: #1e1e1e !important; color: #44abff !important; border: 1px solid #333 !important; border-bottom-color: #1e1e1e !important; border-top-left-radius: 8px; border-top-right-radius: 8px; }
+    </style>
+</head>
+<body>
+
+<div class="container-fluid max-width" style="max-width: 1200px; margin: auto;">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2><i class="bi bi-shield-lock-fill"></i> Auditoria de Alterações</h2>
+        <div class="btn-group">
+            <a href="{% url 'dashboard' %}" class="btn btn-outline-light btn-sm"><i class="bi bi-speedometer2"></i> Dashboard</a>
+            <a href="/admin/" class="btn btn-outline-info btn-sm"><i class="bi bi-person-badge"></i> Admin</a>
+        </div>
+    </div>
+
+    <ul class="nav nav-tabs mb-4">
+        <li class="nav-item">
+            <a class="nav-link {% if tipo != 'chat' %}active fw-bold{% endif %}" href="?tipo=os"><i class="bi bi-file-earmark-text-fill"></i> Ordens de Serviço</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link {% if tipo == 'chat' %}active fw-bold{% endif %}" href="?tipo=chat"><i class="bi bi-chat-left-text-fill"></i> Mensagens do Chat</a>
+        </li>
+    </ul>
+
+    <div class="filter-section">
+        {% if tipo == 'chat' %}
+            <form method="GET" class="row g-3 align-items-end">
+                <input type="hidden" name="tipo" value="chat">
+                <div class="col-md-3">
+                    <label class="form-label small text-secondary">Usuário do Chat</label>
+                    <input type="text" name="usuario" class="form-control form-control-dark" placeholder="Buscar por usuário..." value="{{ request.GET.usuario|default:'' }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small text-secondary">Data Inicial</label>
+                    <input type="date" name="data_inicio" class="form-control form-control-dark" value="{{ request.GET.data_inicio|default:'' }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small text-secondary">Data Final</label>
+                    <input type="date" name="data_fim" class="form-control form-control-dark" value="{{ request.GET.data_fim|default:'' }}">
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-info w-100"><i class="bi bi-search"></i> Filtrar Chat</button>
+                    <a href="?tipo=chat" class="btn btn-link btn-sm text-secondary w-100 mt-1">Limpar Filtros</a>
+                </div>
+            </form>
+        {% else %}
+            <form method="GET" class="row g-3 align-items-end">
+                <input type="hidden" name="tipo" value="os">
+                <div class="col-md-3">
+                    <label class="form-label small text-secondary">Número da RCP</label>
+                    <input type="number" name="rcp" class="form-control form-control-dark" placeholder="Ex: 1234" value="{{ request.GET.rcp|default:'' }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small text-secondary">Data Inicial</label>
+                    <input type="date" name="data_inicio" class="form-control form-control-dark" value="{{ request.GET.data_inicio|default:'' }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label small text-secondary">Data Final</label>
+                    <input type="date" name="data_fim" class="form-control form-control-dark" value="{{ request.GET.data_fim|default:'' }}">
+                </div>
+                <div class="col-md-3">
+                    <button type="submit" class="btn btn-info w-100"><i class="bi bi-search"></i> Filtrar OS</button>
+                    <a href="?tipo=os" class="btn btn-link btn-sm text-secondary w-100 mt-1">Limpar Filtros</a>
+                </div>
+            </form>
+        {% endif %}
+    </div>
+
+    <div class="card p-4">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                {% if tipo == 'chat' %}
+                    <thead>
+                        <tr class="text-secondary" style="border-bottom: 2px solid #444; font-size: 0.85em; text-transform: uppercase;">
+                            <th style="width: 15%;">Data e Hora</th>
+                            <th style="width: 15%;">Autor</th>
+                            <th style="width: 20%;">Grupo / Contexto</th>
+                            <th style="width: 10%;">Ação</th>
+                            <th style="width: 40%;">Conteúdo / Mudanças</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for h in historico %}
+                        <tr style="border-bottom: 1px solid #333;">
+                            <td>
+                                <span class="d-block fw-bold">{{ h.history_date|date:"d/m/Y" }}</span>
+                                <small class="text-secondary">{{ h.history_date|date:"H:i:s" }}</small>
+                            </td>
+                            <td>
+                                <span class="user-tag">
+                                    <i class="bi bi-person-circle"></i> {{ h.autor.username|upper }}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="text-info fw-bold">ID Grupo: {{ h.grupo_id }}</span><br>
+                                <small class="text-muted text-uppercase" style="font-size: 0.75em;">{{ h.grupo.nome|default:"Chat Privado/Grupo" }}</small>
+                            </td>
+                            <td>
+                                {% if h.history_type == '+' %}
+                                    <span class="badge badge-create">ENVIOU</span>
+                                {% elif h.history_type == '~' %}
+                                    <span class="badge badge-edit">EDITOU</span>
+                                {% elif h.history_type == '-' %}
+                                    <span class="badge badge-delete">DELETOU</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-info-custom">
+                                {% if h.history_type == '+' %}
+                                    <small class="text-success">Texto enviado:</small> "<i>{{ h.texto }}</i>"
+                                {% elif h.mudancas %}
+                                    <div class="change-box">
+                                        <ul class="list-unstyled mb-0">
+                                            {% for m in h.mudancas %}
+                                                <li class="mb-1">
+                                                    <strong class="text-secondary" style="font-size: 0.8em;">{{ m.campo }}:</strong><br>
+                                                    <span class="text-danger" style="text-decoration: line-through; opacity: 0.6;">{{ m.antigo }}</span> 
+                                                    <i class="bi bi-arrow-right-short text-white mx-1"></i> 
+                                                    <span class="text-success fw-bold">{{ m.novo }}</span>
+                                                </li>
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                {% else %}
+                                    <small class="text-muted italic">Mensagem alterada sem modificação textual de campos vigiados.</small>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center py-5">
+                                <i class="bi bi-inbox text-secondary" style="font-size: 2rem;"></i><br>
+                                Nenhum histórico de mensagens encontrado.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                {% else %}
+                    <thead>
+                        <tr class="text-secondary" style="border-bottom: 2px solid #444; font-size: 0.85em; text-transform: uppercase;">
+                            <th style="width: 15%;">Data e Hora</th>
+                            <th style="width: 15%;">Usuário</th>
+                            <th style="width: 20%;">RCP / Cliente</th>
+                            <th style="width: 10%;">Ação</th>
+                            <th style="width: 40%;">Mudanças Detectadas</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for h in historico %}
+                        <tr style="border-bottom: 1px solid #333;">
+                            <td>
+                                <span class="d-block fw-bold">{{ h.history_date|date:"d/m/Y" }}</span>
+                                <small class="text-secondary">{{ h.history_date|date:"H:i:s" }}</small>
+                            </td>
+                            <td>
+                                <span class="user-tag">
+                                    <i class="bi bi-person-circle"></i> 
+                                    {% if h.history_user %}
+                                        {{ h.history_user.get_full_name|default:h.history_user.username|upper }}
+                                    {% else %}
+                                        SISTEMA
+                                    {% endif %}
+                                </span>
+                            </td>
+                            <td>
+                                <span class="text-info fw-bold">RCP: {{ h.rcp }}</span><br>
+                                <small class="text-muted text-uppercase" style="font-size: 0.75em;">{{ h.cliente }}</small>
+                            </td>
+                            <td>
+                                {% if h.history_type == '+' %}
+                                    <span class="badge badge-create">NOVO</span>
+                                {% elif h.history_type == '~' %}
+                                    <span class="badge badge-edit">EDIT</span>
+                                {% elif h.history_type == '-' %}
+                                    <span class="badge badge-delete">DEL</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-info-custom">
+                                {% if h.mudancas %}
+                                    <div class="change-box">
+                                        <ul class="list-unstyled mb-0">
+                                            {%             for m in h.mudancas %}
+                                                <li class="mb-1">
+                                                    <strong class="text-secondary" style="font-size: 0.8em;">{{ m.campo }}:</strong><br>
+                                                    <span class="text-danger" style="text-decoration: line-through; opacity: 0.6;">{{ m.antigo }}</span> 
+                                                    <i class="bi bi-arrow-right-short text-white mx-1"></i> 
+                                                    <span class="text-success fw-bold">{{ m.novo }}</span>
+                                                </li>
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                {% elif h.history_type == '+' %}
+                                    <small class="text-success">Registro inicial criado.</small>
+                                {% else %}
+                                    <small class="text-muted italic">Sem alterações monitoradas.</small>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center py-5">
+                                <i class="bi bi-inbox text-secondary" style="font-size: 2rem;"></i><br>
+                                Nenhum histórico encontrado com esses filtros.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                {% endif %}
+            </table>
+
+            <nav class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if historico.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link bg-dark text-info border-secondary" 
+                               href="?page=1&tipo={{ tipo }}{% if request.GET.rcp %}&rcp={{ request.GET.rcp }}{% endif %}{% if request.GET.usuario %}&usuario={{ request.GET.usuario }}{% endif %}{% if request.GET.data_inicio %}&data_inicio={{ request.GET.data_inicio }}{% endif %}{% if request.GET.data_fim %}&data_fim={{ request.GET.data_fim }}{% endif %}">
+                               <i class="bi bi-chevron-double-left"></i> Primeira
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link bg-dark text-info border-secondary" 
+                               href="?page={{ historico.previous_page_number }}&tipo={{ tipo }}{% if request.GET.rcp %}&rcp={{ request.GET.rcp }}{% endif %}{% if request.GET.usuario %}&usuario={{ request.GET.usuario }}{% endif %}{% if request.GET.data_inicio %}&data_inicio={{ request.GET.data_inicio }}{% endif %}{% if request.GET.data_fim %}&data_fim={{ request.GET.data_fim }}{% endif %}">
+                               Anterior
+                            </a>
+                        </li>
+                    {% endif %}
+
+                    <li class="page-item disabled">
+                        <span class="page-link bg-secondary text-white border-secondary">
+                            Página {{ historico.number }} de {{ historico.paginator.num_pages }}
+                        </span>
+                    </li>
+
+                    {% if historico.has_next %}
+                        <li class="page-item">
+                            <a class="page-link bg-dark text-info border-secondary" 
+                               href="?page={{ historico.next_page_number }}&tipo={{ tipo }}{% if request.GET.rcp %}&rcp={{ request.GET.rcp }}{% endif %}{% if request.GET.usuario %}&usuario={{ request.GET.usuario }}{% endif %}{% if request.GET.data_inicio %}&data_inicio={{ request.GET.data_inicio }}{% endif %}{% if request.GET.data_fim %}&data_fim={{ request.GET.data_fim }}{% endif %}">
+                               Próxima
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link bg-dark text-info border-secondary" 
+                               href="?page={{ historico.paginator.num_pages }}&tipo={{ tipo }}{% if request.GET.rcp %}&rcp={{ request.GET.rcp }}{% endif %}{% if request.GET.usuario %}&usuario={{ request.GET.usuario }}{% endif %}{% if request.GET.data_inicio %}&data_inicio={{ request.GET.data_inicio }}{% endif %}{% if request.GET.data_fim %}&data_fim={{ request.GET.data_fim }}{% endif %}">
+                               Última <i class="bi bi-chevron-double-right"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
