@@ -6,7 +6,6 @@ namespace ApiClean.Infra.Data;
 public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
     public DbSet<OrdemServico> OrdensServico => Set<OrdemServico>();
-    public DbSet<QuadroObras> QuadrosObras => Set<QuadroObras>();
     public DbSet<CertificadoRcp> CertificadosRcp => Set<CertificadoRcp>();
     public DbSet<RcpFoto> RcpFotos => Set<RcpFoto>();
     public DbSet<NotificacaoSetor> NotificacoesSetor => Set<NotificacaoSetor>();
@@ -18,6 +17,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<FuncionarioProducao> FuncionariosProducao => Set<FuncionarioProducao>();
     public DbSet<RegistroPecaMatada> RegistrosPecasMatadas => Set<RegistroPecaMatada>();
     public DbSet<FotoPecaMatada> FotosPecasMatadas => Set<FotoPecaMatada>();
+    public DbSet<Usuario> Usuarios => Set<Usuario>();
+    public DbSet<GrupoUsuario> GruposUsuarios => Set<GrupoUsuario>();
+    public DbSet<UsuarioGrupo> UsuariosGrupos => Set<UsuarioGrupo>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
